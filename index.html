@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT 機房設備管理</title>
+<meta name="description" content="IT 機房設備管理：伺服器、網路、儲存、電源與空調設備清單，支援搜尋、篩選、新增編輯與 CSV 匯出。">
+<style>
+  :root{
+    --bg:#f6f7f9; --card:#fff; --text:#111827; --muted:#6b7280; --line:#e5e7eb;
+    --accent:#2563eb; --accent-soft:#eff6ff; --green:#15803d; --green-bg:#f0fdf4;
+    --amber:#b45309; --amber-bg:#fffbeb; --red:#b91c1c; --red-bg:#fef2f2; --gray-bg:#f3f4f6;
+    --radius:14px; --shadow:0 1px 3px rgba(0,0,0,.06),0 8px 24px rgba(0,0,0,.04);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+  a{color:var(--accent)}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+  header{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;justify-content:space-between;margin:8px 0 18px}
+  h1{font-size:28px;line-height:1.25;margin:0;letter-spacing:.01em}
+  h1 span{font-size:15px;display:block;color:var(--muted);font-weight:500;margin-top:6px}
+  .btn{border:1px solid var(--line);background:#fff;color:var(--text);padding:9px 14px;border-radius:10px;cursor:pointer;font-size:14px}
+  .btn:hover{border-color:#cbd5e1}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#1d4ed8}
+  .btn.danger{color:var(--red);border-color:#fecaca}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+  .stat b{font-size:28px;display:block;line-height:1.1}
+  .stat span{color:var(--muted);font-size:13px}
+  .toolbar{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:14px}
+  .field{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+  .field input,.field select,form input,form select,form textarea{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:14px;background:#fff;color:var(--text);width:100%}
+  .field input:focus,.field select:focus,form input:focus,form select:focus,form textarea:focus{outline:2px solid #bfdbfe;border-color:var(--accent)}
+  .search{flex:1 1 220px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .table-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;min-width:860px;font-size:14px}
+  th,td{padding:11px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:#f9fafb;color:#374151;font-size:13px;white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:#f8fafc}
+  .tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;white-space:nowrap}
+  .tag.server{background:#eff6ff;color:#1e40af}.tag.network{background:#f0fdfa;color:#0f766e}
+  .tag.storage{background:#faf5ff;color:#6b21a8}.tag.power{background:#fff7ed;color:#9a3412}
+  .tag.other{background:var(--gray-bg);color:#374151}
+  .status{font-weight:600}
+  .status.ok{color:var(--green)}.status.maint{color:var(--amber)}.status.fault{color:var(--red)}.status.off{color:var(--muted)}
+  .warn{color:var(--amber);font-size:12px;display:block}
+  .actions{white-space:nowrap}
+  .actions button{border:0;background:none;cursor:pointer;color:var(--accent);padding:4px 6px;font-size:13px}
+  .actions button.del{color:var(--red)}
+  .empty{padding:36px;text-align:center;color:var(--muted)}
+  .note{color:var(--muted);font-size:13px;margin-top:12px}
+  /* Modal */
+  dialog{border:0;border-radius:16px;padding:0;max-width:720px;width:calc(100% - 32px);box-shadow:0 24px 64px rgba(0,0,0,.2)}
+  dialog::backdrop{background:rgba(15,23,42,.45)}
+  .modal-head{padding:18px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .modal-head h2{margin:0;font-size:19px}
+  .modal-head button{border:0;background:var(--gray-bg);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px}
+  form{padding:20px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .grid .full{grid-column:1/-1}
+  form label{font-size:13px;color:#374151;display:block;margin-bottom:4px}
+  .form-foot{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+  @media(max-width:760px){
+    .wrap{padding:16px 12px 36px}
+    h1{font-size:24px}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .toolbar{flex-direction:column;align-items:stretch}
+    .field,.field input,.field select{width:100%}
+    .grid{grid-template-columns:1fr}
+    /* 表格轉卡片 */
+    table,.table-wrap{min-width:0}
+    thead{display:none}
+    table,tbody,tr,td{display:block;width:100%}
+    tr{border-bottom:1px solid var(--line);padding:10px 14px}
+    td{border:0;padding:4px 0}
+    td::before{content:attr(data-label);display:block;color:var(--muted);font-size:12px}
+    td.actions::before{display:none}
+    .actions{border-top:1px dashed var(--line);margin-top:8px;padding-top:8px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>IT 機房設備管理
+      <span>伺服器、網路、儲存、電源與空調 — 一頁看清機房資產，資料可匯出 CSV</span>
+    </h1>
+    <button class="btn primary" id="addBtn">＋ 新增設備</button>
+  </header>
+
+  <section class="stats" aria-label="統計">
+    <div class="stat"><b id="statTotal">0</b><span>設備總數</span></div>
+    <div class="stat"><b id="statOk">0</b><span>正常運作</span></div>
+    <div class="stat"><b id="statMaint">0</b><span>維護中 / 故障</span></div>
+    <div class="stat"><b id="statWarn">0</b><span>保固 90 天內到期</span></div>
+  </section>
+
+  <section class="toolbar" aria-label="搜尋與篩選">
+    <label class="field search">搜尋
+      <input id="q" type="search" placeholder="名稱、品牌型號、資產編號、IP、機櫃位置…">
+    </label>
+    <label class="field">類別
+      <select id="catFilter">
+        <option value="">全部類別</option>
+        <option value="伺服器">伺服器</option>
+        <option value="網路設備">網路設備</option>
+        <option value="儲存設備">儲存設備</option>
+        <option value="電源與空調">電源與空調</option>
+        <option value="其他">其他</option>
+      </select>
+    </label>
+    <label class="field">狀態
+      <select id="statusFilter">
+        <option value="">全部狀態</option>
+        <option value="正常">正常</option>
+        <option value="維護中">維護中</option>
+        <option value="故障">故障</option>
+        <option value="停用">停用</option>
+      </select>
+    </label>
+    <button class="btn primary" id="exportFiltered">匯出目前篩選結果 CSV</button>
+    <button class="btn" id="exportAll">匯出全部 CSV</button>
+    <button class="btn" id="resetBtn" title="還原為內建範例資料">還原範例</button>
+  </section>
+
+  <section class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>設備名稱</th><th>類別</th><th>品牌型號</th><th>資產編號</th>
+          <th>機櫃位置</th><th>IP 位址</th><th>狀態</th><th>購入 / 保固到期</th><th>負責人</th><th>操作</th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" hidden>沒有符合條件的設備，請調整搜尋或篩選。</div>
+  </section>
+
+  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。</p>
+</div>
+
+<dialog id="dlg">
+  <div class="modal-head"><h2 id="dlgTitle">新增設備</h2><button id="closeBtn" aria-label="關閉">×</button></div>
+  <form id="form">
+    <input type="hidden" id="editId">
+    <div class="grid">
+      <div><label for="fName">設備名稱 *</label><input id="fName" required placeholder="例如：WEB-01 應用伺服器"></div>
+      <div><label for="fCat">類別 *</label><select id="fCat" required>
+        <option value="伺服器">伺服器</option><option value="網路設備">網路設備</option>
+        <option value="儲存設備">儲存設備</option><option value="電源與空調">電源與空調</option>
+        <option value="其他">其他</option></select></div>
+      <div><label for="fModel">品牌型號</label><input id="fModel" placeholder="例如：Dell PowerEdge R750"></div>
+      <div><label for="fAsset">資產編號</label><input id="fAsset" placeholder="例如：IT-SRV-001"></div>
+      <div><label for="fRack">機櫃位置</label><input id="fRack" placeholder="例如：A 區 R01-U12"></div>
+      <div><label for="fIp">IP 位址</label><input id="fIp" placeholder="例如：10.0.1.11"></div>
+      <div><label for="fStatus">狀態 *</label><select id="fStatus" required>
+        <option value="正常">正常</option><option value="維護中">維護中</option>
+        <option value="故障">故障</option><option value="停用">停用</option></select></div>
+      <div><label for="fOwner">負責人</label><input id="fOwner" placeholder="例如：陳建彰"></div>
+      <div><label for="fBuy">購入日期</label><input id="fBuy" type="date"></div>
+      <div><label for="fWarranty">保固到期</label><input id="fWarranty" type="date"></div>
+      <div class="full"><label for="fNote">備註</label><textarea id="fNote" rows="3" placeholder="用途、作業系統、注意事項…"></textarea></div>
+    </div>
+    <div class="form-foot">
+      <button type="button" class="btn" id="cancelBtn">取消</button>
+      <button type="submit" class="btn primary">儲存設備</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const KEY = 'it-room-equipment-v1';
+const SAMPLE = [
+  {id:'1',name:'WEB-01 應用伺服器',cat:'伺服器',model:'Dell PowerEdge R750',asset:'IT-SRV-001',rack:'A 區 R01-U12',ip:'10.0.1.11',status:'正常',buy:'2024-03-15',warranty:'2027-03-14',owner:'陳建彰',note:'Ubuntu 22.04，跑官網與 API'},
+  {id:'2',name:'DB-01 資料庫伺服器',cat:'伺服器',model:'HPE ProLiant DL380 Gen11',asset:'IT-SRV-002',rack:'A 區 R01-U20',ip:'10.0.1.21',status:'正常',buy:'2024-03-15',warranty:'2027-03-14',owner:'陳建彰',note:'PostgreSQL 主機，每日備份'},
+  {id:'3',name:'VM-01 虛擬化主機',cat:'伺服器',model:'Dell PowerEdge R650',asset:'IT-SRV-003',rack:'A 區 R02-U08',ip:'10.0.1.12',status:'維護中',buy:'2023-06-01',warranty:'2026-05-31',owner:'陳建彰',note:'排程韌體更新中'},
+  {id:'4',name:'核心交換器 CORE-SW01',cat:'網路設備',model:'Cisco Catalyst 9300-48P',asset:'IT-NET-001',rack:'B 區 R01-U01',ip:'10.0.0.1',status:'正常',buy:'2023-09-10',warranty:'2028-09-09',owner:'陳建彰',note:'機房核心，雙電源'},
+  {id:'5',name:'樓層交換器 ACC-SW02',cat:'網路設備',model:'Cisco Catalyst 9200L-24T',asset:'IT-NET-002',rack:'B 區 R01-U03',ip:'10.0.0.2',status:'正常',buy:'2023-09-10',warranty:'2028-09-09',owner:'',note:''},
+  {id:'6',name:'防火牆 FW-01',cat:'網路設備',model:'Fortinet FortiGate 100F',asset:'IT-NET-003',rack:'B 區 R01-U05',ip:'10.0.0.254',status:'正常',buy:'2024-01-20',warranty:'2027-01-19',owner:'陳建彰',note:'授權到期前 60 天提醒續約'},
+  {id:'7',name:'無線控制器 WLC-01',cat:'網路設備',model:'Cisco Catalyst 9800-L',asset:'IT-NET-004',rack:'B 區 R02-U02',ip:'10.0.0.10',status:'正常',buy:'2024-02-05',warranty:'2027-02-04',owner:'',note:'管理全棟 AP'},
+  {id:'8',name:'NAS 備份主機',cat:'儲存設備',model:'Synology RS422+',asset:'IT-STO-001',rack:'A 區 R03-U10',ip:'10.0.1.31',status:'正常',buy:'2024-05-12',warranty:'2027-05-11',owner:'陳建彰',note:'每週完整備份 + 每日增量'},
+  {id:'9',name:'SAN 儲存陣列',cat:'儲存設備',model:'Dell PowerVault ME5',asset:'IT-STO-002',rack:'A 區 R03-U18',ip:'10.0.1.32',status:'正常',buy:'2023-11-01',warranty:'2026-10-31',owner:'',note:'保固即將到期，請評估續保'},
+  {id:'10',name:'UPS 不斷電系統',cat:'電源與空調',model:'APC Smart-UPS SRT 6000',asset:'IT-PWR-001',rack:'C 區 R01-U01',ip:'',status:'正常',buy:'2023-04-18',warranty:'2026-04-17',owner:'',note:'電池建議每 3 年檢測'},
+  {id:'11',name:'精密空調 PAC-01',cat:'電源與空調',model:'Stulz CyberAir 3',asset:'IT-PWR-002',rack:'C 區',ip:'',status:'正常',buy:'2022-08-01',warranty:'2027-07-31',owner:'',note:'設定 24°C，每季保養'},
+  {id:'12',name:'KVM 切換器',cat:'其他',model:'ATEN CS1708A',asset:'IT-OTH-001',rack:'A 區 R01-U01',ip:'',status:'停用',buy:'2021-05-10',warranty:'',owner:'',note:'已由 IP KVM 取代，留作備品'},
+];
+let items = load();
+function load(){ try{ const v = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(v) && v.length ? v : SAMPLE.slice(); }catch(e){ return SAMPLE.slice(); } }
+function save(){ localStorage.setItem(KEY, JSON.stringify(items)); }
+function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function catClass(c){ return {'伺服器':'server','網路設備':'network','儲存設備':'storage','電源與空調':'power'}[c] || 'other'; }
+function statusClass(s){ return {'正常':'ok','維護中':'maint','故障':'fault','停用':'off'}[s] || 'off'; }
+function daysTo(date){ if(!date) return null; return Math.ceil((new Date(date) - new Date(new Date().toDateString())) / 86400000); }
+function filtered(){
+  const q = document.getElementById('q').value.trim().toLowerCase();
+  const cat = document.getElementById('catFilter').value;
+  const st = document.getElementById('statusFilter').value;
+  return items.filter(x => (!cat || x.cat===cat) && (!st || x.status===st) &&
+    (!q || [x.name,x.model,x.asset,x.rack,x.ip,x.owner,x.note].join(' ').toLowerCase().includes(q)));
+}
+function render(){
+  const list = filtered();
+  const tb = document.getElementById('tbody');
+  document.getElementById('empty').hidden = list.length > 0;
+  tb.innerHTML = list.map(x => {
+    const d = daysTo(x.warranty);
+    const warn = d !== null && d >= 0 && d <= 90 ? `<span class="warn">保固 ${d} 天後到期</span>` : '';
+    return `<tr>
+      <td data-label="設備名稱"><b>${esc(x.name)}</b>${x.note ? `<br><span style="color:#6b7280;font-size:13px">${esc(x.note)}</span>` : ''}</td>
+      <td data-label="類別"><span class="tag ${catClass(x.cat)}">${esc(x.cat)}</span></td>
+      <td data-label="品牌型號">${esc(x.model) || '—'}</td>
+      <td data-label="資產編號">${esc(x.asset) || '—'}</td>
+      <td data-label="機櫃位置">${esc(x.rack) || '—'}</td>
+      <td data-label="IP 位址">${esc(x.ip) || '—'}</td>
+      <td data-label="狀態"><span class="status ${statusClass(x.status)}">${esc(x.status)}</span></td>
+      <td data-label="購入 / 保固到期">${esc(x.buy) || '—'}<br>${esc(x.warranty) || '—'}${warn}</td>
+      <td data-label="負責人">${esc(x.owner) || '—'}</td>
+      <td class="actions" data-label="操作"><button data-edit="${x.id}">編輯</button><button class="del" data-del="${x.id}">刪除</button></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('statTotal').textContent = items.length;
+  document.getElementById('statOk').textContent = items.filter(x=>x.status==='正常').length;
+  document.getElementById('statMaint').textContent = items.filter(x=>x.status==='維護中'||x.status==='故障').length;
+  document.getElementById('statWarn').textContent = items.filter(x=>{const d=daysTo(x.warranty);return d!==null&&d>=0&&d<=90;}).length;
+  tb.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openEdit(b.dataset.edit));
+  tb.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    const x = items.find(i=>i.id===b.dataset.del);
+    if(x && confirm(`確定刪除「${x.name}」嗎？`)){ items = items.filter(i=>i.id!==x.id); save(); render(); }
+  });
+}
+function toCSV(list){
+  const cols = ['設備名稱','類別','品牌型號','資產編號','機櫃位置','IP位址','狀態','購入日期','保固到期','負責人','備註'];
+  const keys = ['name','cat','model','asset','rack','ip','status','buy','warranty','owner','note'];
+  const q = v => '"' + String(v ?? '').replace(/"/g,'""') + '"';
+  const lines = [cols.map(q).join(',')].concat(list.map(x => keys.map(k=>q(x[k])).join(',')));
+  return '\uFEFF' + lines.join('\r\n');
+}
+function downloadCSV(list, filename){
+  if(!list.length){ alert('沒有可匯出的資料'); return; }
+  const blob = new Blob([toCSV(list)], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+const dlg = document.getElementById('dlg');
+function openAdd(){
+  document.getElementById('dlgTitle').textContent = '新增設備';
+  document.getElementById('form').reset();
+  document.getElementById('editId').value = '';
+  dlg.showModal();
+}
+function openEdit(id){
+  const x = items.find(i=>i.id===id); if(!x) return;
+  document.getElementById('dlgTitle').textContent = '編輯設備';
+  document.getElementById('editId').value = x.id;
+  document.getElementById('fName').value = x.name; document.getElementById('fCat').value = x.cat;
+  document.getElementById('fModel').value = x.model || ''; document.getElementById('fAsset').value = x.asset || '';
+  document.getElementById('fRack').value = x.rack || ''; document.getElementById('fIp').value = x.ip || '';
+  document.getElementById('fStatus').value = x.status; document.getElementById('fOwner').value = x.owner || '';
+  document.getElementById('fBuy').value = x.buy || ''; document.getElementById('fWarranty').value = x.warranty || '';
+  document.getElementById('fNote').value = x.note || '';
+  dlg.showModal();
+}
+document.getElementById('addBtn').onclick = openAdd;
+document.getElementById('closeBtn').onclick = () => dlg.close();
+document.getElementById('cancelBtn').onclick = () => dlg.close();
+document.getElementById('form').onsubmit = e => {
+  e.preventDefault();
+  const v = id => document.getElementById(id).value.trim();
+  const data = {name:v('fName'),cat:v('fCat'),model:v('fModel'),asset:v('fAsset'),rack:v('fRack'),ip:v('fIp'),status:v('fStatus'),owner:v('fOwner'),buy:v('fBuy'),warranty:v('fWarranty'),note:v('fNote')};
+  const editId = document.getElementById('editId').value;
+  if(editId){ const x = items.find(i=>i.id===editId); Object.assign(x, data); }
+  else { items.unshift({id: Date.now().toString(), ...data}); }
+  save(); render(); dlg.close();
+};
+document.getElementById('exportAll').onclick = () => downloadCSV(items, 'it-room-equipment-all.csv');
+document.getElementById('exportFiltered').onclick = () => downloadCSV(filtered(), 'it-room-equipment-filtered.csv');
+document.getElementById('resetBtn').onclick = () => { if(confirm('還原為內建範例資料？目前新增或修改的資料會被覆蓋。')){ items = SAMPLE.slice(); save(); render(); } };
+['q','catFilter','statusFilter'].forEach(id => document.getElementById(id).addEventListener('input', render));
+render();
+</script>
+</body>
+</html>
