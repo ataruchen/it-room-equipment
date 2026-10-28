@@ -238,7 +238,15 @@ function load(){
 // 資料庫規則（Firebase Console > Realtime Database > Rules）須設為僅登入者可讀寫：
 // { "rules": { "it-room-equipment": { ".read": "auth != null", ".write": "auth != null" } } }
 // 並在 Authentication > Sign-in method 啟用 Email/Password 登入。
-const FIREBASE_CONFIG = null;
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBorU2WLQpK_jCUYN2E4JfOkhCC5TkfLmA",
+  authDomain: "it-room-equipment.firebaseapp.com",
+  databaseURL: "https://it-room-equipment-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "it-room-equipment",
+  storageBucket: "it-room-equipment.firebasestorage.app",
+  messagingSenderId: "671740060864",
+  appId: "1:671740060864:web:a1967668688b97f9b5b925"
+};
 const SYNC_PATH = 'it-room-equipment';
 let dbRef = null, syncEnabled = false, lastPushedAt = 0, lastAppliedAt = 0;
 function setSyncStatus(text, mode){
