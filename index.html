@@ -40,6 +40,8 @@
   th{background:#f9fafb;color:#374151;font-size:13px;white-space:nowrap}
   tr:last-child td{border-bottom:0}
   tbody tr:hover{background:#f8fafc}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{background:#eef2ff}
   .tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;white-space:nowrap}
   .tag.server{background:#eff6ff;color:#1e40af}.tag.network{background:#f0fdfa;color:#0f766e}
   .tag.storage{background:#faf5ff;color:#6b21a8}.tag.power{background:#fff7ed;color:#9a3412}
@@ -107,6 +109,17 @@
         <option value="虛擬">虛擬</option>
       </select>
     </label>
+    <label class="field">排序
+      <select id="sortKey">
+        <option value="">預設順序</option>
+        <option value="name">設備名稱</option>
+        <option value="type">類型</option>
+        <option value="os">作業系統</option>
+        <option value="ip">IP 位址</option>
+        <option value="owner">負責人</option>
+      </select>
+    </label>
+    <button class="btn" id="sortDirBtn" title="切換升序／降序">升序 ↑</button>
     <button class="btn primary" id="exportFiltered">匯出目前篩選結果 CSV</button>
     <button class="btn" id="exportAll">匯出全部 CSV</button>
     <button class="btn" id="importBtn">匯入 CSV</button>
@@ -120,7 +133,7 @@
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>設備名稱</th><th>類型</th><th>作業系統</th><th>IP 位址</th><th>負責人</th><th>操作</th>
+          <th class="sortable" data-sort="name">設備名稱</th><th class="sortable" data-sort="type">類型</th><th class="sortable" data-sort="os">作業系統</th><th class="sortable" data-sort="ip">IP 位址</th><th class="sortable" data-sort="owner">負責人</th><th>操作</th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -128,7 +141,7 @@
     <div class="empty" id="empty" hidden>沒有符合條件的設備，請調整搜尋或篩選。</div>
   </section>
 
-  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。匯入支援 UTF-8 與 Big5 編碼、逗號或 Tab 分隔，欄位順序與匯出相同（設備名稱、類型、作業系統、IP 位址、負責人、備註）；舊匯出檔若含類別、品牌型號欄位，匯入時會按表頭對應並忽略該兩欄，匯入的資料會附加到現有清單，不會覆蓋；類型 VM 會轉為虛擬、SERVER／PC 會轉為實體，已取消的類別、品牌型號欄位不會再顯示，舊資料開啟時會自動移除該兩欄。若之前匯入的資料已變亂碼，請先用「清空全部」清除後再重新匯入正確的檔案。</p>
+  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。匯入支援 UTF-8 與 Big5 編碼、逗號或 Tab 分隔，欄位順序與匯出相同（設備名稱、類型、作業系統、IP 位址、負責人、備註）；舊匯出檔若含類別、品牌型號欄位，匯入時會按表頭對應並忽略該兩欄，匯入的資料會附加到現有清單，不會覆蓋；類型 VM 會轉為虛擬、SERVER／PC 會轉為實體，已取消的類別、品牌型號欄位不會再顯示，舊資料開啟時會自動移除該兩欄。若之前匯入的資料已變亂碼，請先用「清空全部」清除後再重新匯入正確的檔案。點一下設備名稱、類型、作業系統、IP 位址、負責人的表頭即可排序，再點一次切換升序／降序；IP 會依每段數字排序（10.0.1.11 會排在 10.0.1.100 前面），空白值一律排在最後。</p>
 </div>
 
 <dialog id="dlg">
@@ -188,6 +201,48 @@ function load(){
   return SAMPLE.slice();
 }
 let items = load();
+let sortKey = '', sortDir = 1;
+function parseIPv4(s){
+  const parts = String(s || '').trim().split('.');
+  if(parts.length !== 4 || parts.some(x => x === '' || isNaN(Number(x)))) return null;
+  return parts.map(Number);
+}
+function compareValues(a, b, key){
+  a = a || ''; b = b || '';
+  if(a === '' && b === '') return 0;
+  if(a === '') return 1;
+  if(b === '') return -1;
+  if(key === 'ip'){
+    const pa = parseIPv4(a), pb = parseIPv4(b);
+    if(pa && pb){
+      for(let i = 0; i < 4; i++){ if(pa[i] !== pb[i]) return pa[i] - pb[i]; }
+      return 0;
+    }
+  }
+  return String(a).localeCompare(String(b), 'zh-Hant');
+}
+function sortList(list){
+  if(!sortKey) return list;
+  return list.slice().sort((x, y) => {
+    // 空白值不論升序降序都排最後
+    const ax = x[sortKey] || '', ay = y[sortKey] || '';
+    if(ax === '' && ay !== '') return 1;
+    if(ay === '' && ax !== '') return -1;
+    const c = compareValues(x[sortKey], y[sortKey], sortKey);
+    return c !== 0 ? c * sortDir : String(x.name).localeCompare(String(y.name), 'zh-Hant');
+  });
+}
+function updateSortUI(){
+  document.querySelectorAll('th.sortable').forEach(th => {
+    const label = th.dataset.label || th.textContent.replace(/ [▲▼]$/, '');
+    th.dataset.label = label;
+    th.textContent = th.dataset.sort === sortKey ? label + (sortDir === 1 ? ' ▲' : ' ▼') : label;
+  });
+  const sel = document.getElementById('sortKey');
+  if(sel) sel.value = sortKey;
+  const btn = document.getElementById('sortDirBtn');
+  if(btn) btn.textContent = sortDir === 1 ? '升序 ↑' : '降序 ↓';
+}
 function save(){ localStorage.setItem(KEY, JSON.stringify(items)); }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function mapType(v){
@@ -202,7 +257,8 @@ function filtered(){
     (!q || [x.name,x.type,x.os,x.ip,x.owner,x.note].join(' ').toLowerCase().includes(q)));
 }
 function render(){
-  const list = filtered();
+  const list = sortList(filtered());
+  updateSortUI();
   const tb = document.getElementById('tbody');
   document.getElementById('empty').hidden = list.length > 0;
   tb.innerHTML = list.map(x => {
@@ -319,6 +375,18 @@ document.getElementById('form').onsubmit = e => {
   if(editId){ const x = items.find(i=>i.id===editId); Object.assign(x, data); }
   else { items.unshift({id: Date.now().toString(), ...data}); }
   save(); render(); dlg.close();
+};
+document.querySelectorAll('th.sortable').forEach(th => {
+  th.onclick = () => {
+    const key = th.dataset.sort;
+    if(sortKey === key){ sortDir = -sortDir; } else { sortKey = key; sortDir = 1; }
+    render();
+  };
+});
+document.getElementById('sortKey').onchange = e => { sortKey = e.target.value; sortDir = 1; render(); };
+document.getElementById('sortDirBtn').onclick = () => {
+  if(!sortKey) sortKey = 'name';
+  sortDir = -sortDir; render();
 };
 document.getElementById('exportAll').onclick = () => downloadCSV(items, 'it-room-equipment-all.csv');
 document.getElementById('importBtn').onclick = () => document.getElementById('csvFile').click();
