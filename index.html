@@ -44,9 +44,7 @@
   .tag.server{background:#eff6ff;color:#1e40af}.tag.network{background:#f0fdfa;color:#0f766e}
   .tag.storage{background:#faf5ff;color:#6b21a8}.tag.power{background:#fff7ed;color:#9a3412}
   .tag.other{background:var(--gray-bg);color:#374151}
-  .status{font-weight:600}
-  .status.ok{color:var(--green)}.status.maint{color:var(--amber)}.status.fault{color:var(--red)}.status.off{color:var(--muted)}
-  .warn{color:var(--amber);font-size:12px;display:block}
+  .tag.physical{background:#eff6ff;color:#1e40af}.tag.virtual{background:#faf5ff;color:#6b21a8}
   .actions{white-space:nowrap}
   .actions button{border:0;background:none;cursor:pointer;color:var(--accent);padding:4px 6px;font-size:13px}
   .actions button.del{color:var(--red)}
@@ -93,14 +91,14 @@
 
   <section class="stats" aria-label="統計">
     <div class="stat"><b id="statTotal">0</b><span>設備總數</span></div>
-    <div class="stat"><b id="statOk">0</b><span>正常運作</span></div>
-    <div class="stat"><b id="statMaint">0</b><span>維護中 / 故障</span></div>
-    <div class="stat"><b id="statWarn">0</b><span>保固 90 天內到期</span></div>
+    <div class="stat"><b id="statPhysical">0</b><span>實體</span></div>
+    <div class="stat"><b id="statVirtual">0</b><span>虛擬</span></div>
+    <div class="stat"><b id="statServer">0</b><span>伺服器</span></div>
   </section>
 
   <section class="toolbar" aria-label="搜尋與篩選">
     <label class="field search">搜尋
-      <input id="q" type="search" placeholder="名稱、品牌型號、資產編號、IP、機櫃位置…">
+      <input id="q" type="search" placeholder="名稱、品牌型號、作業系統、IP…">
     </label>
     <label class="field">類別
       <select id="catFilter">
@@ -112,13 +110,11 @@
         <option value="其他">其他</option>
       </select>
     </label>
-    <label class="field">狀態
-      <select id="statusFilter">
-        <option value="">全部狀態</option>
-        <option value="正常">正常</option>
-        <option value="維護中">維護中</option>
-        <option value="故障">故障</option>
-        <option value="停用">停用</option>
+    <label class="field">類型
+      <select id="typeFilter">
+        <option value="">全部類型</option>
+        <option value="實體">實體</option>
+        <option value="虛擬">虛擬</option>
       </select>
     </label>
     <button class="btn primary" id="exportFiltered">匯出目前篩選結果 CSV</button>
@@ -130,8 +126,8 @@
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>設備名稱</th><th>類別</th><th>品牌型號</th><th>資產編號</th>
-          <th>機櫃位置</th><th>IP 位址</th><th>狀態</th><th>購入 / 保固到期</th><th>負責人</th><th>操作</th>
+          <th>設備名稱</th><th>類別</th><th>類型</th><th>作業系統</th>
+          <th>品牌型號</th><th>IP 位址</th><th>負責人</th><th>操作</th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -139,7 +135,7 @@
     <div class="empty" id="empty" hidden>沒有符合條件的設備，請調整搜尋或篩選。</div>
   </section>
 
-  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。</p>
+  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。舊版已移除的欄位（資產編號、機櫃位置、狀態、購入／保固到期）不會再顯示，舊資料開啟時會自動轉為新欄位格式。</p>
 </div>
 
 <dialog id="dlg">
@@ -152,17 +148,13 @@
         <option value="伺服器">伺服器</option><option value="網路設備">網路設備</option>
         <option value="儲存設備">儲存設備</option><option value="電源與空調">電源與空調</option>
         <option value="其他">其他</option></select></div>
+      <div><label for="fType">類型 *</label><select id="fType" required>
+        <option value="實體">實體</option><option value="虛擬">虛擬</option></select></div>
+      <div><label for="fOs">作業系統</label><input id="fOs" placeholder="例如：Ubuntu 22.04、Windows Server 2022"></div>
       <div><label for="fModel">品牌型號</label><input id="fModel" placeholder="例如：Dell PowerEdge R750"></div>
-      <div><label for="fAsset">資產編號</label><input id="fAsset" placeholder="例如：IT-SRV-001"></div>
-      <div><label for="fRack">機櫃位置</label><input id="fRack" placeholder="例如：A 區 R01-U12"></div>
       <div><label for="fIp">IP 位址</label><input id="fIp" placeholder="例如：10.0.1.11"></div>
-      <div><label for="fStatus">狀態 *</label><select id="fStatus" required>
-        <option value="正常">正常</option><option value="維護中">維護中</option>
-        <option value="故障">故障</option><option value="停用">停用</option></select></div>
       <div><label for="fOwner">負責人</label><input id="fOwner" placeholder="例如：陳建彰"></div>
-      <div><label for="fBuy">購入日期</label><input id="fBuy" type="date"></div>
-      <div><label for="fWarranty">保固到期</label><input id="fWarranty" type="date"></div>
-      <div class="full"><label for="fNote">備註</label><textarea id="fNote" rows="3" placeholder="用途、作業系統、注意事項…"></textarea></div>
+      <div class="full"><label for="fNote">備註</label><textarea id="fNote" rows="3" placeholder="用途、注意事項…"></textarea></div>
     </div>
     <div class="form-foot">
       <button type="button" class="btn" id="cancelBtn">取消</button>
@@ -174,57 +166,69 @@
 <script>
 const KEY = 'it-room-equipment-v1';
 const SAMPLE = [
-  {id:'1',name:'WEB-01 應用伺服器',cat:'伺服器',model:'Dell PowerEdge R750',asset:'IT-SRV-001',rack:'A 區 R01-U12',ip:'10.0.1.11',status:'正常',buy:'2024-03-15',warranty:'2027-03-14',owner:'陳建彰',note:'Ubuntu 22.04，跑官網與 API'},
-  {id:'2',name:'DB-01 資料庫伺服器',cat:'伺服器',model:'HPE ProLiant DL380 Gen11',asset:'IT-SRV-002',rack:'A 區 R01-U20',ip:'10.0.1.21',status:'正常',buy:'2024-03-15',warranty:'2027-03-14',owner:'陳建彰',note:'PostgreSQL 主機，每日備份'},
-  {id:'3',name:'VM-01 虛擬化主機',cat:'伺服器',model:'Dell PowerEdge R650',asset:'IT-SRV-003',rack:'A 區 R02-U08',ip:'10.0.1.12',status:'維護中',buy:'2023-06-01',warranty:'2026-05-31',owner:'陳建彰',note:'排程韌體更新中'},
-  {id:'4',name:'核心交換器 CORE-SW01',cat:'網路設備',model:'Cisco Catalyst 9300-48P',asset:'IT-NET-001',rack:'B 區 R01-U01',ip:'10.0.0.1',status:'正常',buy:'2023-09-10',warranty:'2028-09-09',owner:'陳建彰',note:'機房核心，雙電源'},
-  {id:'5',name:'樓層交換器 ACC-SW02',cat:'網路設備',model:'Cisco Catalyst 9200L-24T',asset:'IT-NET-002',rack:'B 區 R01-U03',ip:'10.0.0.2',status:'正常',buy:'2023-09-10',warranty:'2028-09-09',owner:'',note:''},
-  {id:'6',name:'防火牆 FW-01',cat:'網路設備',model:'Fortinet FortiGate 100F',asset:'IT-NET-003',rack:'B 區 R01-U05',ip:'10.0.0.254',status:'正常',buy:'2024-01-20',warranty:'2027-01-19',owner:'陳建彰',note:'授權到期前 60 天提醒續約'},
-  {id:'7',name:'無線控制器 WLC-01',cat:'網路設備',model:'Cisco Catalyst 9800-L',asset:'IT-NET-004',rack:'B 區 R02-U02',ip:'10.0.0.10',status:'正常',buy:'2024-02-05',warranty:'2027-02-04',owner:'',note:'管理全棟 AP'},
-  {id:'8',name:'NAS 備份主機',cat:'儲存設備',model:'Synology RS422+',asset:'IT-STO-001',rack:'A 區 R03-U10',ip:'10.0.1.31',status:'正常',buy:'2024-05-12',warranty:'2027-05-11',owner:'陳建彰',note:'每週完整備份 + 每日增量'},
-  {id:'9',name:'SAN 儲存陣列',cat:'儲存設備',model:'Dell PowerVault ME5',asset:'IT-STO-002',rack:'A 區 R03-U18',ip:'10.0.1.32',status:'正常',buy:'2023-11-01',warranty:'2026-10-31',owner:'',note:'保固即將到期，請評估續保'},
-  {id:'10',name:'UPS 不斷電系統',cat:'電源與空調',model:'APC Smart-UPS SRT 6000',asset:'IT-PWR-001',rack:'C 區 R01-U01',ip:'',status:'正常',buy:'2023-04-18',warranty:'2026-04-17',owner:'',note:'電池建議每 3 年檢測'},
-  {id:'11',name:'精密空調 PAC-01',cat:'電源與空調',model:'Stulz CyberAir 3',asset:'IT-PWR-002',rack:'C 區',ip:'',status:'正常',buy:'2022-08-01',warranty:'2027-07-31',owner:'',note:'設定 24°C，每季保養'},
-  {id:'12',name:'KVM 切換器',cat:'其他',model:'ATEN CS1708A',asset:'IT-OTH-001',rack:'A 區 R01-U01',ip:'',status:'停用',buy:'2021-05-10',warranty:'',owner:'',note:'已由 IP KVM 取代，留作備品'},
+  {id:'1',name:'WEB-01 應用伺服器',cat:'伺服器',type:'實體',os:'Ubuntu 22.04',model:'Dell PowerEdge R750',ip:'10.0.1.11',owner:'陳建彰',note:'跑官網與 API'},
+  {id:'2',name:'DB-01 資料庫伺服器',cat:'伺服器',type:'實體',os:'Ubuntu 22.04',model:'HPE ProLiant DL380 Gen11',ip:'10.0.1.21',owner:'陳建彰',note:'PostgreSQL 主機，每日備份'},
+  {id:'3',name:'VM-01 虛擬化主機',cat:'伺服器',type:'實體',os:'VMware ESXi 8.0',model:'Dell PowerEdge R650',ip:'10.0.1.12',owner:'陳建彰',note:'承載下方虛擬主機'},
+  {id:'13',name:'VM-APP-01 應用虛擬主機',cat:'伺服器',type:'虛擬',os:'Ubuntu 22.04',model:'VMware 虛擬主機',ip:'10.0.1.13',owner:'陳建彰',note:'跑在 VM-01 上'},
+  {id:'14',name:'VM-TEST-01 測試虛擬主機',cat:'伺服器',type:'虛擬',os:'Windows Server 2022',model:'VMware 虛擬主機',ip:'10.0.1.14',owner:'',note:'測試環境，跑在 VM-01 上'},
+  {id:'4',name:'核心交換器 CORE-SW01',cat:'網路設備',type:'實體',os:'Cisco IOS XE',model:'Cisco Catalyst 9300-48P',ip:'10.0.0.1',owner:'陳建彰',note:'機房核心，雙電源'},
+  {id:'5',name:'樓層交換器 ACC-SW02',cat:'網路設備',type:'實體',os:'Cisco IOS XE',model:'Cisco Catalyst 9200L-24T',ip:'10.0.0.2',owner:'',note:''},
+  {id:'6',name:'防火牆 FW-01',cat:'網路設備',type:'實體',os:'FortiOS 7.4',model:'Fortinet FortiGate 100F',ip:'10.0.0.254',owner:'陳建彰',note:'授權到期前 60 天提醒續約'},
+  {id:'7',name:'無線控制器 WLC-01',cat:'網路設備',type:'實體',os:'Cisco IOS XE',model:'Cisco Catalyst 9800-L',ip:'10.0.0.10',owner:'',note:'管理全棟 AP'},
+  {id:'8',name:'NAS 備份主機',cat:'儲存設備',type:'實體',os:'Synology DSM 7.2',model:'Synology RS422+',ip:'10.0.1.31',owner:'陳建彰',note:'每週完整備份 + 每日增量'},
+  {id:'9',name:'SAN 儲存陣列',cat:'儲存設備',type:'實體',os:'',model:'Dell PowerVault ME5',ip:'10.0.1.32',owner:'',note:''},
+  {id:'10',name:'UPS 不斷電系統',cat:'電源與空調',type:'實體',os:'',model:'APC Smart-UPS SRT 6000',ip:'',owner:'',note:'電池建議每 3 年檢測'},
+  {id:'11',name:'精密空調 PAC-01',cat:'電源與空調',type:'實體',os:'',model:'Stulz CyberAir 3',ip:'',owner:'',note:'設定 24°C，每季保養'},
+  {id:'12',name:'KVM 切換器',cat:'其他',type:'實體',os:'',model:'ATEN CS1708A',ip:'',owner:'',note:'已由 IP KVM 取代，留作備品'},
 ];
+function normalize(x){
+  return {id:String(x.id),name:x.name||'',cat:x.cat||'其他',type:x.type||'實體',os:x.os||'',model:x.model||'',ip:x.ip||'',owner:x.owner||'',note:x.note||''};
+}
+function load(){
+  try{
+    const v = JSON.parse(localStorage.getItem(KEY));
+    if(Array.isArray(v) && v.length){
+      const mapped = v.map(normalize);
+      // 舊範例沒有虛擬項目時，補上新範例的虛擬主機，方便直接看到實體／虛擬區分
+      if(!mapped.some(x=>x.type==='虛擬') && mapped.some(x=>x.name.includes('WEB-01'))){
+        mapped.splice(3, 0, normalize(SAMPLE[3]), normalize(SAMPLE[4]));
+      }
+      return mapped;
+    }
+  }catch(e){}
+  return SAMPLE.slice();
+}
 let items = load();
-function load(){ try{ const v = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(v) && v.length ? v : SAMPLE.slice(); }catch(e){ return SAMPLE.slice(); } }
 function save(){ localStorage.setItem(KEY, JSON.stringify(items)); }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function catClass(c){ return {'伺服器':'server','網路設備':'network','儲存設備':'storage','電源與空調':'power'}[c] || 'other'; }
-function statusClass(s){ return {'正常':'ok','維護中':'maint','故障':'fault','停用':'off'}[s] || 'off'; }
-function daysTo(date){ if(!date) return null; return Math.ceil((new Date(date) - new Date(new Date().toDateString())) / 86400000); }
 function filtered(){
   const q = document.getElementById('q').value.trim().toLowerCase();
   const cat = document.getElementById('catFilter').value;
-  const st = document.getElementById('statusFilter').value;
-  return items.filter(x => (!cat || x.cat===cat) && (!st || x.status===st) &&
-    (!q || [x.name,x.model,x.asset,x.rack,x.ip,x.owner,x.note].join(' ').toLowerCase().includes(q)));
+  const tp = document.getElementById('typeFilter').value;
+  return items.filter(x => (!cat || x.cat===cat) && (!tp || x.type===tp) &&
+    (!q || [x.name,x.model,x.type,x.os,x.ip,x.owner,x.note].join(' ').toLowerCase().includes(q)));
 }
 function render(){
   const list = filtered();
   const tb = document.getElementById('tbody');
   document.getElementById('empty').hidden = list.length > 0;
   tb.innerHTML = list.map(x => {
-    const d = daysTo(x.warranty);
-    const warn = d !== null && d >= 0 && d <= 90 ? `<span class="warn">保固 ${d} 天後到期</span>` : '';
     return `<tr>
       <td data-label="設備名稱"><b>${esc(x.name)}</b>${x.note ? `<br><span style="color:#6b7280;font-size:13px">${esc(x.note)}</span>` : ''}</td>
       <td data-label="類別"><span class="tag ${catClass(x.cat)}">${esc(x.cat)}</span></td>
+      <td data-label="類型"><span class="tag ${x.type==='虛擬' ? 'virtual' : 'physical'}">${esc(x.type)}</span></td>
+      <td data-label="作業系統">${esc(x.os) || '—'}</td>
       <td data-label="品牌型號">${esc(x.model) || '—'}</td>
-      <td data-label="資產編號">${esc(x.asset) || '—'}</td>
-      <td data-label="機櫃位置">${esc(x.rack) || '—'}</td>
       <td data-label="IP 位址">${esc(x.ip) || '—'}</td>
-      <td data-label="狀態"><span class="status ${statusClass(x.status)}">${esc(x.status)}</span></td>
-      <td data-label="購入 / 保固到期">${esc(x.buy) || '—'}<br>${esc(x.warranty) || '—'}${warn}</td>
       <td data-label="負責人">${esc(x.owner) || '—'}</td>
       <td class="actions" data-label="操作"><button data-edit="${x.id}">編輯</button><button class="del" data-del="${x.id}">刪除</button></td>
     </tr>`;
   }).join('');
   document.getElementById('statTotal').textContent = items.length;
-  document.getElementById('statOk').textContent = items.filter(x=>x.status==='正常').length;
-  document.getElementById('statMaint').textContent = items.filter(x=>x.status==='維護中'||x.status==='故障').length;
-  document.getElementById('statWarn').textContent = items.filter(x=>{const d=daysTo(x.warranty);return d!==null&&d>=0&&d<=90;}).length;
+  document.getElementById('statPhysical').textContent = items.filter(x=>x.type==='實體').length;
+  document.getElementById('statVirtual').textContent = items.filter(x=>x.type==='虛擬').length;
+  document.getElementById('statServer').textContent = items.filter(x=>x.cat==='伺服器').length;
   tb.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openEdit(b.dataset.edit));
   tb.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     const x = items.find(i=>i.id===b.dataset.del);
@@ -232,8 +236,8 @@ function render(){
   });
 }
 function toCSV(list){
-  const cols = ['設備名稱','類別','品牌型號','資產編號','機櫃位置','IP位址','狀態','購入日期','保固到期','負責人','備註'];
-  const keys = ['name','cat','model','asset','rack','ip','status','buy','warranty','owner','note'];
+  const cols = ['設備名稱','類別','類型','作業系統','品牌型號','IP位址','負責人','備註'];
+  const keys = ['name','cat','type','os','model','ip','owner','note'];
   const q = v => '"' + String(v ?? '').replace(/"/g,'""') + '"';
   const lines = [cols.map(q).join(',')].concat(list.map(x => keys.map(k=>q(x[k])).join(',')));
   return '\uFEFF' + lines.join('\r\n');
@@ -250,6 +254,7 @@ function openAdd(){
   document.getElementById('dlgTitle').textContent = '新增設備';
   document.getElementById('form').reset();
   document.getElementById('editId').value = '';
+  document.getElementById('fType').value = '實體';
   dlg.showModal();
 }
 function openEdit(id){
@@ -257,11 +262,9 @@ function openEdit(id){
   document.getElementById('dlgTitle').textContent = '編輯設備';
   document.getElementById('editId').value = x.id;
   document.getElementById('fName').value = x.name; document.getElementById('fCat').value = x.cat;
-  document.getElementById('fModel').value = x.model || ''; document.getElementById('fAsset').value = x.asset || '';
-  document.getElementById('fRack').value = x.rack || ''; document.getElementById('fIp').value = x.ip || '';
-  document.getElementById('fStatus').value = x.status; document.getElementById('fOwner').value = x.owner || '';
-  document.getElementById('fBuy').value = x.buy || ''; document.getElementById('fWarranty').value = x.warranty || '';
-  document.getElementById('fNote').value = x.note || '';
+  document.getElementById('fType').value = x.type || '實體'; document.getElementById('fOs').value = x.os || '';
+  document.getElementById('fModel').value = x.model || ''; document.getElementById('fIp').value = x.ip || '';
+  document.getElementById('fOwner').value = x.owner || ''; document.getElementById('fNote').value = x.note || '';
   dlg.showModal();
 }
 document.getElementById('addBtn').onclick = openAdd;
@@ -270,7 +273,7 @@ document.getElementById('cancelBtn').onclick = () => dlg.close();
 document.getElementById('form').onsubmit = e => {
   e.preventDefault();
   const v = id => document.getElementById(id).value.trim();
-  const data = {name:v('fName'),cat:v('fCat'),model:v('fModel'),asset:v('fAsset'),rack:v('fRack'),ip:v('fIp'),status:v('fStatus'),owner:v('fOwner'),buy:v('fBuy'),warranty:v('fWarranty'),note:v('fNote')};
+  const data = {name:v('fName'),cat:v('fCat'),type:v('fType'),os:v('fOs'),model:v('fModel'),ip:v('fIp'),owner:v('fOwner'),note:v('fNote')};
   const editId = document.getElementById('editId').value;
   if(editId){ const x = items.find(i=>i.id===editId); Object.assign(x, data); }
   else { items.unshift({id: Date.now().toString(), ...data}); }
@@ -279,7 +282,7 @@ document.getElementById('form').onsubmit = e => {
 document.getElementById('exportAll').onclick = () => downloadCSV(items, 'it-room-equipment-all.csv');
 document.getElementById('exportFiltered').onclick = () => downloadCSV(filtered(), 'it-room-equipment-filtered.csv');
 document.getElementById('resetBtn').onclick = () => { if(confirm('還原為內建範例資料？目前新增或修改的資料會被覆蓋。')){ items = SAMPLE.slice(); save(); render(); } };
-['q','catFilter','statusFilter'].forEach(id => document.getElementById(id).addEventListener('input', render));
+['q','catFilter','typeFilter'].forEach(id => document.getElementById(id).addEventListener('input', render));
 render();
 </script>
 </body>
