@@ -120,6 +120,7 @@
     <button class="btn" id="exportAll">匯出全部 CSV</button>
     <button class="btn" id="importBtn">匯入 CSV</button>
     <button class="btn" id="templateBtn" title="下載與匯出格式相同的 CSV 範本">下載匯入範本</button>
+    <button class="btn" id="clearBtn" title="清空目前全部設備，無法復原">清空全部</button>
     <button class="btn" id="resetBtn" title="還原為內建範例資料">還原範例</button>
     <input type="file" id="csvFile" accept=".csv,text/csv" hidden>
   </section>
@@ -137,7 +138,7 @@
     <div class="empty" id="empty" hidden>沒有符合條件的設備，請調整搜尋或篩選。</div>
   </section>
 
-  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。匯入 CSV 時請用與匯出相同的欄位順序（設備名稱、類別、類型、作業系統、品牌型號、IP 位址、負責人、備註），匯入的資料會附加到現有清單，不會覆蓋；已取消的「電源與空調」類別在匯入或舊資料開啟時會自動轉為「其他」。</p>
+  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。匯入支援 UTF-8 與 Big5 編碼、逗號或 Tab 分隔，欄位順序與匯出相同（設備名稱、類別、類型、作業系統、品牌型號、IP 位址、負責人、備註），匯入的資料會附加到現有清單，不會覆蓋；類型 VM 會轉為虛擬、SERVER／PC 會轉為實體，已取消的「電源與空調」類別會自動轉為「其他」。若之前匯入的資料已變亂碼，請先用「清空全部」清除後再重新匯入正確的檔案。</p>
 </div>
 
 <dialog id="dlg">
@@ -184,13 +185,14 @@ const SAMPLE = [
   {id:'12',name:'KVM 切換器',cat:'其他',type:'實體',os:'',model:'ATEN CS1708A',ip:'',owner:'',note:'已由 IP KVM 取代，留作備品'},
 ];
 function normalize(x){
-  return {id:String(x.id),name:x.name||'',cat:normalizeCat(x.cat),type:x.type||'實體',os:x.os||'',model:x.model||'',ip:x.ip||'',owner:x.owner||'',note:x.note||''};
+  return {id:String(x.id),name:x.name||'',cat:normalizeCat(x.cat),type:mapType(x.type),os:x.os||'',model:x.model||'',ip:x.ip||'',owner:x.owner||'',note:x.note||''};
 }
 function load(){
   try{
     const v = JSON.parse(localStorage.getItem(KEY));
     if(Array.isArray(v) && v.length){
-      const mapped = v.map(normalize);
+      // 之前用 UTF-8 誤讀 Big5 匯入的亂碼（含有 �）會在開啟時直接剔除，避免殘留
+      const mapped = v.map(normalize).filter(x => !String(x.name).includes('\uFFFD'));
       // 舊範例沒有虛擬項目時，補上新範例的虛擬主機，方便直接看到實體／虛擬區分
       if(!mapped.some(x=>x.type==='虛擬') && mapped.some(x=>x.name.includes('WEB-01'))){
         mapped.splice(3, 0, normalize(SAMPLE[3]), normalize(SAMPLE[4]));
@@ -205,6 +207,11 @@ function save(){ localStorage.setItem(KEY, JSON.stringify(items)); }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function catClass(c){ return {'伺服器':'server','網路設備':'network','儲存設備':'storage'}[c] || 'other'; }
 function normalizeCat(c){ return c === '電源與空調' ? '其他' : (c || '其他'); }
+function mapType(v){
+  const t = String(v || '').trim().toLowerCase();
+  if(t === '虛擬' || t === 'vm' || t === 'virtual') return '虛擬';
+  return '實體';
+}
 function filtered(){
   const q = document.getElementById('q').value.trim().toLowerCase();
   const cat = document.getElementById('catFilter').value;
@@ -252,8 +259,18 @@ function downloadCSV(list, filename){
   a.href = URL.createObjectURL(blob); a.download = filename; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
 }
-function parseCSV(text){
+function decodeCSVBuffer(buf){
+  // 先用嚴格 UTF-8 解碼，失敗或出現 � 就改用 Big5（台灣 Excel 常用的繁中編碼）
+  try{
+    const t = new TextDecoder('utf-8', {fatal: true}).decode(buf);
+    if(!t.includes('\uFFFD')) return {text: t, enc: 'UTF-8'};
+  }catch(e){}
+  try{ return {text: new TextDecoder('big5').decode(buf), enc: 'Big5'}; }catch(e){}
+  return {text: new TextDecoder('utf-8').decode(buf), enc: 'UTF-8'};
+}
+function parseCSV(text, delimiter){
   text = text.replace(/^\uFEFF/, '');
+  const delim = delimiter || ',';
   const rows = []; let row = [], field = '', inQuotes = false;
   for(let i = 0; i < text.length; i++){
     const ch = text[i];
@@ -262,7 +279,7 @@ function parseCSV(text){
         if(text[i + 1] === '"'){ field += '"'; i++; } else { inQuotes = false; }
       } else { field += ch; }
     } else if(ch === '"'){ inQuotes = true;
-    } else if(ch === ','){ row.push(field); field = '';
+    } else if(ch === delim){ row.push(field); field = '';
     } else if(ch === '\n' || ch === '\r'){
       if(ch === '\r' && text[i + 1] === '\n') i++;
       row.push(field); field = ''; rows.push(row); row = [];
@@ -271,8 +288,11 @@ function parseCSV(text){
   if(field !== '' || row.length){ row.push(field); rows.push(row); }
   return rows;
 }
-function importCSV(text){
-  const rows = parseCSV(text).filter(r => r.some(c => String(c).trim() !== ''));
+function importCSV(text, enc){
+  // 分隔符自動偵測：第一行 Tab 比逗號多就用 Tab（Excel 另存的 .csv 常是 Tab 分隔）
+  const firstLine = String(text).split(/\r?\n/).find(l => l.trim() !== '') || '';
+  const delimiter = (firstLine.split('\t').length - 1) > (firstLine.split(',').length - 1) ? '\t' : ',';
+  const rows = parseCSV(text, delimiter).filter(r => r.some(c => String(c).trim() !== ''));
   if(!rows.length){ alert('這個 CSV 沒有可匯入的資料'); return; }
   const header = rows[0].map(c => String(c).trim());
   const hasHeader = header.includes('設備名稱');
@@ -285,12 +305,11 @@ function importCSV(text){
     const get = (key, pos) => { const j = col[key]; return String(j >= 0 ? (r[j] || '') : (r[pos] || '')).trim(); };
     const name = get('name', 0);
     if(!name){ skipped++; return; }
-    const type = get('type', 2);
-    items.push(normalize({id: Date.now().toString() + '-' + i, name, cat: get('cat', 1), type: (type === '虛擬' ? '虛擬' : '實體'), os: get('os', 3), model: get('model', 4), ip: get('ip', 5), owner: get('owner', 6), note: get('note', 7)}));
+    items.push(normalize({id: Date.now().toString() + '-' + i, name, cat: get('cat', 1), type: get('type', 2), os: get('os', 3), model: get('model', 4), ip: get('ip', 5), owner: get('owner', 6), note: get('note', 7)}));
     added++;
   });
   save(); render();
-  alert(`已匯入 ${added} 筆${skipped ? `，跳過 ${skipped} 筆（沒有設備名稱）` : ''}。匯入的資料已附加到現有清單。`);
+  alert(`已匯入 ${added} 筆${skipped ? `，跳過 ${skipped} 筆（沒有設備名稱）` : ''}。匯入的資料已附加到現有清單。（偵測編碼：${enc || 'UTF-8'}，分隔符：${delimiter === '\t' ? 'Tab' : '逗號'}）`);
 }
 const dlg = document.getElementById('dlg');
 function openAdd(){
@@ -328,9 +347,12 @@ document.getElementById('csvFile').onchange = e => {
   const file = e.target.files[0]; e.target.value = '';
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = () => importCSV(String(reader.result || ''));
+  reader.onload = () => {
+    const decoded = decodeCSVBuffer(reader.result);
+    importCSV(decoded.text, decoded.enc);
+  };
   reader.onerror = () => alert('讀取 CSV 失敗，請再試一次');
-  reader.readAsText(file, 'UTF-8');
+  reader.readAsArrayBuffer(file);
 };
 document.getElementById('templateBtn').onclick = () => {
   const blob = new Blob([toCSV([
@@ -343,6 +365,7 @@ document.getElementById('templateBtn').onclick = () => {
 };
 document.getElementById('exportFiltered').onclick = () => downloadCSV(filtered(), 'it-room-equipment-filtered.csv');
 document.getElementById('resetBtn').onclick = () => { if(confirm('還原為內建範例資料？目前新增或修改的資料會被覆蓋。')){ items = SAMPLE.slice(); save(); render(); } };
+document.getElementById('clearBtn').onclick = () => { if(confirm('確定清空全部設備嗎？此動作無法復原，建議先匯出備份。')){ items = []; save(); render(); } };
 ['q','catFilter','typeFilter'].forEach(id => document.getElementById(id).addEventListener('input', render));
 render();
 </script>
