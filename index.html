@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IT 機房設備管理</title>
-<meta name="description" content="IT 機房設備管理：伺服器、網路、儲存等設備清單，支援搜尋、篩選、新增編輯與 CSV 匯入匯出。">
+<meta name="description" content="IT 機房設備管理：設備清單，支援搜尋、篩選、新增編輯與 CSV 匯入匯出。">
 <style>
   :root{
     --bg:#f6f7f9; --card:#fff; --text:#111827; --muted:#6b7280; --line:#e5e7eb;
@@ -84,7 +84,7 @@
 <div class="wrap">
   <header>
     <h1>IT 機房設備管理
-      <span>伺服器、網路、儲存等 — 一頁看清機房資產，資料可匯入匯出 CSV</span>
+      <span>一頁看清機房資產，資料可匯入匯出 CSV</span>
     </h1>
     <button class="btn primary" id="addBtn">＋ 新增設備</button>
   </header>
@@ -93,21 +93,12 @@
     <div class="stat"><b id="statTotal">0</b><span>設備總數</span></div>
     <div class="stat"><b id="statPhysical">0</b><span>實體</span></div>
     <div class="stat"><b id="statVirtual">0</b><span>虛擬</span></div>
-    <div class="stat"><b id="statServer">0</b><span>伺服器</span></div>
+    <div class="stat"><b id="statIp">0</b><span>有 IP 位址</span></div>
   </section>
 
   <section class="toolbar" aria-label="搜尋與篩選">
     <label class="field search">搜尋
-      <input id="q" type="search" placeholder="名稱、品牌型號、作業系統、IP…">
-    </label>
-    <label class="field">類別
-      <select id="catFilter">
-        <option value="">全部類別</option>
-        <option value="伺服器">伺服器</option>
-        <option value="網路設備">網路設備</option>
-        <option value="儲存設備">儲存設備</option>
-        <option value="其他">其他</option>
-      </select>
+      <input id="q" type="search" placeholder="名稱、作業系統、IP…">
     </label>
     <label class="field">類型
       <select id="typeFilter">
@@ -129,8 +120,7 @@
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>設備名稱</th><th>類別</th><th>類型</th><th>作業系統</th>
-          <th>品牌型號</th><th>IP 位址</th><th>負責人</th><th>操作</th>
+          <th>設備名稱</th><th>類型</th><th>作業系統</th><th>IP 位址</th><th>負責人</th><th>操作</th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -138,7 +128,7 @@
     <div class="empty" id="empty" hidden>沒有符合條件的設備，請調整搜尋或篩選。</div>
   </section>
 
-  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。匯入支援 UTF-8 與 Big5 編碼、逗號或 Tab 分隔，欄位順序與匯出相同（設備名稱、類別、類型、作業系統、品牌型號、IP 位址、負責人、備註），匯入的資料會附加到現有清單，不會覆蓋；類型 VM 會轉為虛擬、SERVER／PC 會轉為實體，已取消的「電源與空調」類別會自動轉為「其他」。若之前匯入的資料已變亂碼，請先用「清空全部」清除後再重新匯入正確的檔案。</p>
+  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。匯入支援 UTF-8 與 Big5 編碼、逗號或 Tab 分隔，欄位順序與匯出相同（設備名稱、類型、作業系統、IP 位址、負責人、備註）；舊匯出檔若含類別、品牌型號欄位，匯入時會按表頭對應並忽略該兩欄，匯入的資料會附加到現有清單，不會覆蓋；類型 VM 會轉為虛擬、SERVER／PC 會轉為實體，已取消的類別、品牌型號欄位不會再顯示，舊資料開啟時會自動移除該兩欄。若之前匯入的資料已變亂碼，請先用「清空全部」清除後再重新匯入正確的檔案。</p>
 </div>
 
 <dialog id="dlg">
@@ -147,14 +137,9 @@
     <input type="hidden" id="editId">
     <div class="grid">
       <div><label for="fName">設備名稱 *</label><input id="fName" required placeholder="例如：WEB-01 應用伺服器"></div>
-      <div><label for="fCat">類別 *</label><select id="fCat" required>
-        <option value="伺服器">伺服器</option><option value="網路設備">網路設備</option>
-        <option value="儲存設備">儲存設備</option>
-        <option value="其他">其他</option></select></div>
       <div><label for="fType">類型 *</label><select id="fType" required>
         <option value="實體">實體</option><option value="虛擬">虛擬</option></select></div>
       <div><label for="fOs">作業系統</label><input id="fOs" placeholder="例如：Ubuntu 22.04、Windows Server 2022"></div>
-      <div><label for="fModel">品牌型號</label><input id="fModel" placeholder="例如：Dell PowerEdge R750"></div>
       <div><label for="fIp">IP 位址</label><input id="fIp" placeholder="例如：10.0.1.11"></div>
       <div><label for="fOwner">負責人</label><input id="fOwner" placeholder="例如：陳建彰"></div>
       <div class="full"><label for="fNote">備註</label><textarea id="fNote" rows="3" placeholder="用途、注意事項…"></textarea></div>
@@ -169,23 +154,23 @@
 <script>
 const KEY = 'it-room-equipment-v1';
 const SAMPLE = [
-  {id:'1',name:'WEB-01 應用伺服器',cat:'伺服器',type:'實體',os:'Ubuntu 22.04',model:'Dell PowerEdge R750',ip:'10.0.1.11',owner:'陳建彰',note:'跑官網與 API'},
-  {id:'2',name:'DB-01 資料庫伺服器',cat:'伺服器',type:'實體',os:'Ubuntu 22.04',model:'HPE ProLiant DL380 Gen11',ip:'10.0.1.21',owner:'陳建彰',note:'PostgreSQL 主機，每日備份'},
-  {id:'3',name:'VM-01 虛擬化主機',cat:'伺服器',type:'實體',os:'VMware ESXi 8.0',model:'Dell PowerEdge R650',ip:'10.0.1.12',owner:'陳建彰',note:'承載下方虛擬主機'},
-  {id:'13',name:'VM-APP-01 應用虛擬主機',cat:'伺服器',type:'虛擬',os:'Ubuntu 22.04',model:'VMware 虛擬主機',ip:'10.0.1.13',owner:'陳建彰',note:'跑在 VM-01 上'},
-  {id:'14',name:'VM-TEST-01 測試虛擬主機',cat:'伺服器',type:'虛擬',os:'Windows Server 2022',model:'VMware 虛擬主機',ip:'10.0.1.14',owner:'',note:'測試環境，跑在 VM-01 上'},
-  {id:'4',name:'核心交換器 CORE-SW01',cat:'網路設備',type:'實體',os:'Cisco IOS XE',model:'Cisco Catalyst 9300-48P',ip:'10.0.0.1',owner:'陳建彰',note:'機房核心，雙電源'},
-  {id:'5',name:'樓層交換器 ACC-SW02',cat:'網路設備',type:'實體',os:'Cisco IOS XE',model:'Cisco Catalyst 9200L-24T',ip:'10.0.0.2',owner:'',note:''},
-  {id:'6',name:'防火牆 FW-01',cat:'網路設備',type:'實體',os:'FortiOS 7.4',model:'Fortinet FortiGate 100F',ip:'10.0.0.254',owner:'陳建彰',note:'授權到期前 60 天提醒續約'},
-  {id:'7',name:'無線控制器 WLC-01',cat:'網路設備',type:'實體',os:'Cisco IOS XE',model:'Cisco Catalyst 9800-L',ip:'10.0.0.10',owner:'',note:'管理全棟 AP'},
-  {id:'8',name:'NAS 備份主機',cat:'儲存設備',type:'實體',os:'Synology DSM 7.2',model:'Synology RS422+',ip:'10.0.1.31',owner:'陳建彰',note:'每週完整備份 + 每日增量'},
-  {id:'9',name:'SAN 儲存陣列',cat:'儲存設備',type:'實體',os:'',model:'Dell PowerVault ME5',ip:'10.0.1.32',owner:'',note:''},
-  {id:'10',name:'UPS 不斷電系統',cat:'其他',type:'實體',os:'',model:'APC Smart-UPS SRT 6000',ip:'',owner:'',note:'電池建議每 3 年檢測'},
-  {id:'11',name:'精密空調 PAC-01',cat:'其他',type:'實體',os:'',model:'Stulz CyberAir 3',ip:'',owner:'',note:'設定 24°C，每季保養'},
-  {id:'12',name:'KVM 切換器',cat:'其他',type:'實體',os:'',model:'ATEN CS1708A',ip:'',owner:'',note:'已由 IP KVM 取代，留作備品'},
+  {id:'1',name:'WEB-01 應用伺服器',type:'實體',os:'Ubuntu 22.04',ip:'10.0.1.11',owner:'陳建彰',note:'跑官網與 API'},
+  {id:'2',name:'DB-01 資料庫伺服器',type:'實體',os:'Ubuntu 22.04',ip:'10.0.1.21',owner:'陳建彰',note:'PostgreSQL 主機，每日備份'},
+  {id:'3',name:'VM-01 虛擬化主機',type:'實體',os:'VMware ESXi 8.0',ip:'10.0.1.12',owner:'陳建彰',note:'承載下方虛擬主機'},
+  {id:'13',name:'VM-APP-01 應用虛擬主機',type:'虛擬',os:'Ubuntu 22.04',ip:'10.0.1.13',owner:'陳建彰',note:'跑在 VM-01 上'},
+  {id:'14',name:'VM-TEST-01 測試虛擬主機',type:'虛擬',os:'Windows Server 2022',ip:'10.0.1.14',owner:'',note:'測試環境，跑在 VM-01 上'},
+  {id:'4',name:'核心交換器 CORE-SW01',type:'實體',os:'Cisco IOS XE',ip:'10.0.0.1',owner:'陳建彰',note:'機房核心，雙電源'},
+  {id:'5',name:'樓層交換器 ACC-SW02',type:'實體',os:'Cisco IOS XE',ip:'10.0.0.2',owner:'',note:''},
+  {id:'6',name:'防火牆 FW-01',type:'實體',os:'FortiOS 7.4',ip:'10.0.0.254',owner:'陳建彰',note:'授權到期前 60 天提醒續約'},
+  {id:'7',name:'無線控制器 WLC-01',type:'實體',os:'Cisco IOS XE',ip:'10.0.0.10',owner:'',note:'管理全棟 AP'},
+  {id:'8',name:'NAS 備份主機',type:'實體',os:'Synology DSM 7.2',ip:'10.0.1.31',owner:'陳建彰',note:'每週完整備份 + 每日增量'},
+  {id:'9',name:'SAN 儲存陣列',type:'實體',os:'',ip:'10.0.1.32',owner:'',note:''},
+  {id:'10',name:'UPS 不斷電系統',type:'實體',os:'',ip:'',owner:'',note:'電池建議每 3 年檢測'},
+  {id:'11',name:'精密空調 PAC-01',type:'實體',os:'',ip:'',owner:'',note:'設定 24°C，每季保養'},
+  {id:'12',name:'KVM 切換器',type:'實體',os:'',ip:'',owner:'',note:'已由 IP KVM 取代，留作備品'},
 ];
 function normalize(x){
-  return {id:String(x.id),name:x.name||'',cat:normalizeCat(x.cat),type:mapType(x.type),os:x.os||'',model:x.model||'',ip:x.ip||'',owner:x.owner||'',note:x.note||''};
+  return {id:String(x.id),name:x.name||'',type:mapType(x.type),os:x.os||'',ip:x.ip||'',owner:x.owner||'',note:x.note||''};
 }
 function load(){
   try{
@@ -205,8 +190,6 @@ function load(){
 let items = load();
 function save(){ localStorage.setItem(KEY, JSON.stringify(items)); }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function catClass(c){ return {'伺服器':'server','網路設備':'network','儲存設備':'storage'}[c] || 'other'; }
-function normalizeCat(c){ return c === '電源與空調' ? '其他' : (c || '其他'); }
 function mapType(v){
   const t = String(v || '').trim().toLowerCase();
   if(t === '虛擬' || t === 'vm' || t === 'virtual') return '虛擬';
@@ -214,10 +197,9 @@ function mapType(v){
 }
 function filtered(){
   const q = document.getElementById('q').value.trim().toLowerCase();
-  const cat = document.getElementById('catFilter').value;
   const tp = document.getElementById('typeFilter').value;
-  return items.filter(x => (!cat || x.cat===cat) && (!tp || x.type===tp) &&
-    (!q || [x.name,x.model,x.type,x.os,x.ip,x.owner,x.note].join(' ').toLowerCase().includes(q)));
+  return items.filter(x => (!tp || x.type===tp) &&
+    (!q || [x.name,x.type,x.os,x.ip,x.owner,x.note].join(' ').toLowerCase().includes(q)));
 }
 function render(){
   const list = filtered();
@@ -226,10 +208,8 @@ function render(){
   tb.innerHTML = list.map(x => {
     return `<tr>
       <td data-label="設備名稱"><b>${esc(x.name)}</b>${x.note ? `<br><span style="color:#6b7280;font-size:13px">${esc(x.note)}</span>` : ''}</td>
-      <td data-label="類別"><span class="tag ${catClass(x.cat)}">${esc(x.cat)}</span></td>
       <td data-label="類型"><span class="tag ${x.type==='虛擬' ? 'virtual' : 'physical'}">${esc(x.type)}</span></td>
       <td data-label="作業系統">${esc(x.os) || '—'}</td>
-      <td data-label="品牌型號">${esc(x.model) || '—'}</td>
       <td data-label="IP 位址">${esc(x.ip) || '—'}</td>
       <td data-label="負責人">${esc(x.owner) || '—'}</td>
       <td class="actions" data-label="操作"><button data-edit="${x.id}">編輯</button><button class="del" data-del="${x.id}">刪除</button></td>
@@ -238,7 +218,7 @@ function render(){
   document.getElementById('statTotal').textContent = items.length;
   document.getElementById('statPhysical').textContent = items.filter(x=>x.type==='實體').length;
   document.getElementById('statVirtual').textContent = items.filter(x=>x.type==='虛擬').length;
-  document.getElementById('statServer').textContent = items.filter(x=>x.cat==='伺服器').length;
+  document.getElementById('statIp').textContent = items.filter(x=>x.ip).length;
   tb.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openEdit(b.dataset.edit));
   tb.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
     const x = items.find(i=>i.id===b.dataset.del);
@@ -246,8 +226,8 @@ function render(){
   });
 }
 function toCSV(list){
-  const cols = ['設備名稱','類別','類型','作業系統','品牌型號','IP位址','負責人','備註'];
-  const keys = ['name','cat','type','os','model','ip','owner','note'];
+  const cols = ['設備名稱','類型','作業系統','IP位址','負責人','備註'];
+  const keys = ['name','type','os','ip','owner','note'];
   const q = v => '"' + String(v ?? '').replace(/"/g,'""') + '"';
   const lines = [cols.map(q).join(',')].concat(list.map(x => keys.map(k=>q(x[k])).join(',')));
   return '\uFEFF' + lines.join('\r\n');
@@ -297,15 +277,14 @@ function importCSV(text, enc){
   const header = rows[0].map(c => String(c).trim());
   const hasHeader = header.includes('設備名稱');
   const idx = name => hasHeader ? header.indexOf(name) : -1;
-  const col = {name: idx('設備名稱'), cat: idx('類別'), type: idx('類型'), os: idx('作業系統'), model: idx('品牌型號'), ip: idx('IP位址'), owner: idx('負責人'), note: idx('備註')};
-  const fallback = ['name','cat','type','os','model','ip','owner','note'];
-  const dataRows = hasHeader ? rows.slice(1) : rows;
+  const col = {name: idx('設備名稱'), type: idx('類型'), os: idx('作業系統'), ip: idx('IP位址'), owner: idx('負責人'), note: idx('備註')};
+    const dataRows = hasHeader ? rows.slice(1) : rows;
   let added = 0, skipped = 0;
   dataRows.forEach((r, i) => {
     const get = (key, pos) => { const j = col[key]; return String(j >= 0 ? (r[j] || '') : (r[pos] || '')).trim(); };
     const name = get('name', 0);
     if(!name){ skipped++; return; }
-    items.push(normalize({id: Date.now().toString() + '-' + i, name, cat: get('cat', 1), type: get('type', 2), os: get('os', 3), model: get('model', 4), ip: get('ip', 5), owner: get('owner', 6), note: get('note', 7)}));
+    items.push(normalize({id: Date.now().toString() + '-' + i, name, type: get('type', 1), os: get('os', 2), ip: get('ip', 3), owner: get('owner', 4), note: get('note', 5)}));
     added++;
   });
   save(); render();
@@ -323,9 +302,9 @@ function openEdit(id){
   const x = items.find(i=>i.id===id); if(!x) return;
   document.getElementById('dlgTitle').textContent = '編輯設備';
   document.getElementById('editId').value = x.id;
-  document.getElementById('fName').value = x.name; document.getElementById('fCat').value = x.cat;
+  document.getElementById('fName').value = x.name;
   document.getElementById('fType').value = x.type || '實體'; document.getElementById('fOs').value = x.os || '';
-  document.getElementById('fModel').value = x.model || ''; document.getElementById('fIp').value = x.ip || '';
+  document.getElementById('fIp').value = x.ip || '';
   document.getElementById('fOwner').value = x.owner || ''; document.getElementById('fNote').value = x.note || '';
   dlg.showModal();
 }
@@ -335,7 +314,7 @@ document.getElementById('cancelBtn').onclick = () => dlg.close();
 document.getElementById('form').onsubmit = e => {
   e.preventDefault();
   const v = id => document.getElementById(id).value.trim();
-  const data = {name:v('fName'),cat:v('fCat'),type:v('fType'),os:v('fOs'),model:v('fModel'),ip:v('fIp'),owner:v('fOwner'),note:v('fNote')};
+  const data = {name:v('fName'),type:v('fType'),os:v('fOs'),ip:v('fIp'),owner:v('fOwner'),note:v('fNote')};
   const editId = document.getElementById('editId').value;
   if(editId){ const x = items.find(i=>i.id===editId); Object.assign(x, data); }
   else { items.unshift({id: Date.now().toString(), ...data}); }
@@ -356,8 +335,8 @@ document.getElementById('csvFile').onchange = e => {
 };
 document.getElementById('templateBtn').onclick = () => {
   const blob = new Blob([toCSV([
-    {name:'範例伺服器',cat:'伺服器',type:'實體',os:'Ubuntu 22.04',model:'Dell PowerEdge R750',ip:'10.0.1.99',owner:'',note:'請依此格式填寫後匯入'},
-    {name:'範例虛擬主機',cat:'伺服器',type:'虛擬',os:'Windows Server 2022',model:'VMware 虛擬主機',ip:'10.0.1.100',owner:'',note:''}
+    {name:'範例伺服器',type:'實體',os:'Ubuntu 22.04',ip:'10.0.1.99',owner:'',note:'請依此格式填寫後匯入'},
+    {name:'範例虛擬主機',type:'虛擬',os:'Windows Server 2022',ip:'10.0.1.100',owner:'',note:''}
   ])], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = 'it-room-equipment-template.csv'; a.click();
@@ -366,7 +345,7 @@ document.getElementById('templateBtn').onclick = () => {
 document.getElementById('exportFiltered').onclick = () => downloadCSV(filtered(), 'it-room-equipment-filtered.csv');
 document.getElementById('resetBtn').onclick = () => { if(confirm('還原為內建範例資料？目前新增或修改的資料會被覆蓋。')){ items = SAMPLE.slice(); save(); render(); } };
 document.getElementById('clearBtn').onclick = () => { if(confirm('確定清空全部設備嗎？此動作無法復原，建議先匯出備份。')){ items = []; save(); render(); } };
-['q','catFilter','typeFilter'].forEach(id => document.getElementById(id).addEventListener('input', render));
+['q','typeFilter'].forEach(id => document.getElementById(id).addEventListener('input', render));
 render();
 </script>
 </body>
