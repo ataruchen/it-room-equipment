@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>IT 機房設備管理</title>
-<meta name="description" content="IT 機房設備管理：伺服器、網路、儲存、電源與空調設備清單，支援搜尋、篩選、新增編輯與 CSV 匯出。">
+<meta name="description" content="IT 機房設備管理：伺服器、網路、儲存等設備清單，支援搜尋、篩選、新增編輯與 CSV 匯入匯出。">
 <style>
   :root{
     --bg:#f6f7f9; --card:#fff; --text:#111827; --muted:#6b7280; --line:#e5e7eb;
@@ -84,7 +84,7 @@
 <div class="wrap">
   <header>
     <h1>IT 機房設備管理
-      <span>伺服器、網路、儲存、電源與空調 — 一頁看清機房資產，資料可匯出 CSV</span>
+      <span>伺服器、網路、儲存等 — 一頁看清機房資產，資料可匯入匯出 CSV</span>
     </h1>
     <button class="btn primary" id="addBtn">＋ 新增設備</button>
   </header>
@@ -106,7 +106,6 @@
         <option value="伺服器">伺服器</option>
         <option value="網路設備">網路設備</option>
         <option value="儲存設備">儲存設備</option>
-        <option value="電源與空調">電源與空調</option>
         <option value="其他">其他</option>
       </select>
     </label>
@@ -119,7 +118,10 @@
     </label>
     <button class="btn primary" id="exportFiltered">匯出目前篩選結果 CSV</button>
     <button class="btn" id="exportAll">匯出全部 CSV</button>
+    <button class="btn" id="importBtn">匯入 CSV</button>
+    <button class="btn" id="templateBtn" title="下載與匯出格式相同的 CSV 範本">下載匯入範本</button>
     <button class="btn" id="resetBtn" title="還原為內建範例資料">還原範例</button>
+    <input type="file" id="csvFile" accept=".csv,text/csv" hidden>
   </section>
 
   <section class="card">
@@ -135,7 +137,7 @@
     <div class="empty" id="empty" hidden>沒有符合條件的設備，請調整搜尋或篩選。</div>
   </section>
 
-  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。舊版已移除的欄位（資產編號、機櫃位置、狀態、購入／保固到期）不會再顯示，舊資料開啟時會自動轉為新欄位格式。</p>
+  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。匯入 CSV 時請用與匯出相同的欄位順序（設備名稱、類別、類型、作業系統、品牌型號、IP 位址、負責人、備註），匯入的資料會附加到現有清單，不會覆蓋；已取消的「電源與空調」類別在匯入或舊資料開啟時會自動轉為「其他」。</p>
 </div>
 
 <dialog id="dlg">
@@ -146,7 +148,7 @@
       <div><label for="fName">設備名稱 *</label><input id="fName" required placeholder="例如：WEB-01 應用伺服器"></div>
       <div><label for="fCat">類別 *</label><select id="fCat" required>
         <option value="伺服器">伺服器</option><option value="網路設備">網路設備</option>
-        <option value="儲存設備">儲存設備</option><option value="電源與空調">電源與空調</option>
+        <option value="儲存設備">儲存設備</option>
         <option value="其他">其他</option></select></div>
       <div><label for="fType">類型 *</label><select id="fType" required>
         <option value="實體">實體</option><option value="虛擬">虛擬</option></select></div>
@@ -177,12 +179,12 @@ const SAMPLE = [
   {id:'7',name:'無線控制器 WLC-01',cat:'網路設備',type:'實體',os:'Cisco IOS XE',model:'Cisco Catalyst 9800-L',ip:'10.0.0.10',owner:'',note:'管理全棟 AP'},
   {id:'8',name:'NAS 備份主機',cat:'儲存設備',type:'實體',os:'Synology DSM 7.2',model:'Synology RS422+',ip:'10.0.1.31',owner:'陳建彰',note:'每週完整備份 + 每日增量'},
   {id:'9',name:'SAN 儲存陣列',cat:'儲存設備',type:'實體',os:'',model:'Dell PowerVault ME5',ip:'10.0.1.32',owner:'',note:''},
-  {id:'10',name:'UPS 不斷電系統',cat:'電源與空調',type:'實體',os:'',model:'APC Smart-UPS SRT 6000',ip:'',owner:'',note:'電池建議每 3 年檢測'},
-  {id:'11',name:'精密空調 PAC-01',cat:'電源與空調',type:'實體',os:'',model:'Stulz CyberAir 3',ip:'',owner:'',note:'設定 24°C，每季保養'},
+  {id:'10',name:'UPS 不斷電系統',cat:'其他',type:'實體',os:'',model:'APC Smart-UPS SRT 6000',ip:'',owner:'',note:'電池建議每 3 年檢測'},
+  {id:'11',name:'精密空調 PAC-01',cat:'其他',type:'實體',os:'',model:'Stulz CyberAir 3',ip:'',owner:'',note:'設定 24°C，每季保養'},
   {id:'12',name:'KVM 切換器',cat:'其他',type:'實體',os:'',model:'ATEN CS1708A',ip:'',owner:'',note:'已由 IP KVM 取代，留作備品'},
 ];
 function normalize(x){
-  return {id:String(x.id),name:x.name||'',cat:x.cat||'其他',type:x.type||'實體',os:x.os||'',model:x.model||'',ip:x.ip||'',owner:x.owner||'',note:x.note||''};
+  return {id:String(x.id),name:x.name||'',cat:normalizeCat(x.cat),type:x.type||'實體',os:x.os||'',model:x.model||'',ip:x.ip||'',owner:x.owner||'',note:x.note||''};
 }
 function load(){
   try{
@@ -201,7 +203,8 @@ function load(){
 let items = load();
 function save(){ localStorage.setItem(KEY, JSON.stringify(items)); }
 function esc(s){ return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-function catClass(c){ return {'伺服器':'server','網路設備':'network','儲存設備':'storage','電源與空調':'power'}[c] || 'other'; }
+function catClass(c){ return {'伺服器':'server','網路設備':'network','儲存設備':'storage'}[c] || 'other'; }
+function normalizeCat(c){ return c === '電源與空調' ? '其他' : (c || '其他'); }
 function filtered(){
   const q = document.getElementById('q').value.trim().toLowerCase();
   const cat = document.getElementById('catFilter').value;
@@ -249,6 +252,46 @@ function downloadCSV(list, filename){
   a.href = URL.createObjectURL(blob); a.download = filename; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
 }
+function parseCSV(text){
+  text = text.replace(/^\uFEFF/, '');
+  const rows = []; let row = [], field = '', inQuotes = false;
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(inQuotes){
+      if(ch === '"'){
+        if(text[i + 1] === '"'){ field += '"'; i++; } else { inQuotes = false; }
+      } else { field += ch; }
+    } else if(ch === '"'){ inQuotes = true;
+    } else if(ch === ','){ row.push(field); field = '';
+    } else if(ch === '\n' || ch === '\r'){
+      if(ch === '\r' && text[i + 1] === '\n') i++;
+      row.push(field); field = ''; rows.push(row); row = [];
+    } else { field += ch; }
+  }
+  if(field !== '' || row.length){ row.push(field); rows.push(row); }
+  return rows;
+}
+function importCSV(text){
+  const rows = parseCSV(text).filter(r => r.some(c => String(c).trim() !== ''));
+  if(!rows.length){ alert('這個 CSV 沒有可匯入的資料'); return; }
+  const header = rows[0].map(c => String(c).trim());
+  const hasHeader = header.includes('設備名稱');
+  const idx = name => hasHeader ? header.indexOf(name) : -1;
+  const col = {name: idx('設備名稱'), cat: idx('類別'), type: idx('類型'), os: idx('作業系統'), model: idx('品牌型號'), ip: idx('IP位址'), owner: idx('負責人'), note: idx('備註')};
+  const fallback = ['name','cat','type','os','model','ip','owner','note'];
+  const dataRows = hasHeader ? rows.slice(1) : rows;
+  let added = 0, skipped = 0;
+  dataRows.forEach((r, i) => {
+    const get = (key, pos) => { const j = col[key]; return String(j >= 0 ? (r[j] || '') : (r[pos] || '')).trim(); };
+    const name = get('name', 0);
+    if(!name){ skipped++; return; }
+    const type = get('type', 2);
+    items.push(normalize({id: Date.now().toString() + '-' + i, name, cat: get('cat', 1), type: (type === '虛擬' ? '虛擬' : '實體'), os: get('os', 3), model: get('model', 4), ip: get('ip', 5), owner: get('owner', 6), note: get('note', 7)}));
+    added++;
+  });
+  save(); render();
+  alert(`已匯入 ${added} 筆${skipped ? `，跳過 ${skipped} 筆（沒有設備名稱）` : ''}。匯入的資料已附加到現有清單。`);
+}
 const dlg = document.getElementById('dlg');
 function openAdd(){
   document.getElementById('dlgTitle').textContent = '新增設備';
@@ -280,6 +323,24 @@ document.getElementById('form').onsubmit = e => {
   save(); render(); dlg.close();
 };
 document.getElementById('exportAll').onclick = () => downloadCSV(items, 'it-room-equipment-all.csv');
+document.getElementById('importBtn').onclick = () => document.getElementById('csvFile').click();
+document.getElementById('csvFile').onchange = e => {
+  const file = e.target.files[0]; e.target.value = '';
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => importCSV(String(reader.result || ''));
+  reader.onerror = () => alert('讀取 CSV 失敗，請再試一次');
+  reader.readAsText(file, 'UTF-8');
+};
+document.getElementById('templateBtn').onclick = () => {
+  const blob = new Blob([toCSV([
+    {name:'範例伺服器',cat:'伺服器',type:'實體',os:'Ubuntu 22.04',model:'Dell PowerEdge R750',ip:'10.0.1.99',owner:'',note:'請依此格式填寫後匯入'},
+    {name:'範例虛擬主機',cat:'伺服器',type:'虛擬',os:'Windows Server 2022',model:'VMware 虛擬主機',ip:'10.0.1.100',owner:'',note:''}
+  ])], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'it-room-equipment-template.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+};
 document.getElementById('exportFiltered').onclick = () => downloadCSV(filtered(), 'it-room-equipment-filtered.csv');
 document.getElementById('resetBtn').onclick = () => { if(confirm('還原為內建範例資料？目前新增或修改的資料會被覆蓋。')){ items = SAMPLE.slice(); save(); render(); } };
 ['q','catFilter','typeFilter'].forEach(id => document.getElementById(id).addEventListener('input', render));
