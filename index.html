@@ -100,7 +100,7 @@
 
   <section class="toolbar" aria-label="搜尋與篩選">
     <label class="field search">搜尋
-      <input id="q" type="search" placeholder="名稱、作業系統、IP…">
+      <input id="q" type="search" placeholder="名稱、描述、作業系統、IP…">
     </label>
     <label class="field">類型
       <select id="typeFilter">
@@ -133,7 +133,7 @@
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th class="sortable" data-sort="name">設備名稱</th><th class="sortable" data-sort="type">類型</th><th class="sortable" data-sort="os">作業系統</th><th class="sortable" data-sort="ip">IP 位址</th><th class="sortable" data-sort="owner">負責人</th><th>操作</th>
+          <th class="sortable" data-sort="name">設備名稱</th><th>設備描述</th><th class="sortable" data-sort="type">類型</th><th class="sortable" data-sort="os">作業系統</th><th class="sortable" data-sort="ip">IP 位址</th><th class="sortable" data-sort="owner">負責人</th><th>操作</th>
         </tr></thead>
         <tbody id="tbody"></tbody>
       </table>
@@ -141,7 +141,7 @@
     <div class="empty" id="empty" hidden>沒有符合條件的設備，請調整搜尋或篩選。</div>
   </section>
 
-  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。匯入支援 UTF-8 與 Big5 編碼、逗號或 Tab 分隔，欄位順序與匯出相同（設備名稱、類型、作業系統、IP 位址、負責人、備註）；舊匯出檔若含類別、品牌型號欄位，匯入時會按表頭對應並忽略該兩欄，匯入的資料會附加到現有清單，不會覆蓋；類型 VM 會轉為虛擬、SERVER／PC 會轉為實體，已取消的類別、品牌型號欄位不會再顯示，舊資料開啟時會自動移除該兩欄。若之前匯入的資料已變亂碼，請先用「清空全部」清除後再重新匯入正確的檔案。點一下設備名稱、類型、作業系統、IP 位址、負責人的表頭即可排序，再點一次切換升序／降序；IP 會依每段數字排序（10.0.1.11 會排在 10.0.1.100 前面），空白值一律排在最後。</p>
+  <p class="note">資料儲存在你的瀏覽器（localStorage），換裝置不會同步；匯出 CSV 前請先確認清單內容。CSV 已加 BOM，用 Excel 開啟中文不會亂碼。GitHub Pages 為靜態網站，不提供多人即時共用資料庫。匯入支援 UTF-8 與 Big5 編碼、逗號或 Tab 分隔，欄位順序與匯出相同（設備名稱、設備描述、類型、作業系統、IP 位址、負責人、備註）；舊匯出檔若含類別、品牌型號欄位，匯入時會按表頭對應並忽略該兩欄，匯入的資料會附加到現有清單，不會覆蓋；類型 VM 會轉為虛擬、SERVER／PC 會轉為實體，已取消的類別、品牌型號欄位不會再顯示，舊資料開啟時會自動移除該兩欄。若之前匯入的資料已變亂碼，請先用「清空全部」清除後再重新匯入正確的檔案。點一下設備名稱、類型、作業系統、IP 位址、負責人的表頭即可排序，再點一次切換升序／降序；IP 會依每段數字排序（10.0.1.11 會排在 10.0.1.100 前面），空白值一律排在最後。</p>
 </div>
 
 <dialog id="dlg">
@@ -150,6 +150,7 @@
     <input type="hidden" id="editId">
     <div class="grid">
       <div><label for="fName">設備名稱 *</label><input id="fName" required placeholder="例如：WEB-01 應用伺服器"></div>
+      <div><label for="fDesc">設備描述</label><input id="fDesc" placeholder="例如：主要網站伺服器"></div>
       <div><label for="fType">類型 *</label><select id="fType" required>
         <option value="實體">實體</option><option value="虛擬">虛擬</option></select></div>
       <div><label for="fOs">作業系統</label><input id="fOs" placeholder="例如：Ubuntu 22.04、Windows Server 2022"></div>
@@ -167,23 +168,23 @@
 <script>
 const KEY = 'it-room-equipment-v1';
 const SAMPLE = [
-  {id:'1',name:'WEB-01 應用伺服器',type:'實體',os:'Ubuntu 22.04',ip:'10.0.1.11',owner:'陳建彰',note:'跑官網與 API'},
-  {id:'2',name:'DB-01 資料庫伺服器',type:'實體',os:'Ubuntu 22.04',ip:'10.0.1.21',owner:'陳建彰',note:'PostgreSQL 主機，每日備份'},
-  {id:'3',name:'VM-01 虛擬化主機',type:'實體',os:'VMware ESXi 8.0',ip:'10.0.1.12',owner:'陳建彰',note:'承載下方虛擬主機'},
-  {id:'13',name:'VM-APP-01 應用虛擬主機',type:'虛擬',os:'Ubuntu 22.04',ip:'10.0.1.13',owner:'陳建彰',note:'跑在 VM-01 上'},
-  {id:'14',name:'VM-TEST-01 測試虛擬主機',type:'虛擬',os:'Windows Server 2022',ip:'10.0.1.14',owner:'',note:'測試環境，跑在 VM-01 上'},
-  {id:'4',name:'核心交換器 CORE-SW01',type:'實體',os:'Cisco IOS XE',ip:'10.0.0.1',owner:'陳建彰',note:'機房核心，雙電源'},
-  {id:'5',name:'樓層交換器 ACC-SW02',type:'實體',os:'Cisco IOS XE',ip:'10.0.0.2',owner:'',note:''},
-  {id:'6',name:'防火牆 FW-01',type:'實體',os:'FortiOS 7.4',ip:'10.0.0.254',owner:'陳建彰',note:'授權到期前 60 天提醒續約'},
-  {id:'7',name:'無線控制器 WLC-01',type:'實體',os:'Cisco IOS XE',ip:'10.0.0.10',owner:'',note:'管理全棟 AP'},
-  {id:'8',name:'NAS 備份主機',type:'實體',os:'Synology DSM 7.2',ip:'10.0.1.31',owner:'陳建彰',note:'每週完整備份 + 每日增量'},
-  {id:'9',name:'SAN 儲存陣列',type:'實體',os:'',ip:'10.0.1.32',owner:'',note:''},
-  {id:'10',name:'UPS 不斷電系統',type:'實體',os:'',ip:'',owner:'',note:'電池建議每 3 年檢測'},
-  {id:'11',name:'精密空調 PAC-01',type:'實體',os:'',ip:'',owner:'',note:'設定 24°C，每季保養'},
-  {id:'12',name:'KVM 切換器',type:'實體',os:'',ip:'',owner:'',note:'已由 IP KVM 取代，留作備品'},
+  {id:'1',name:'WEB-01 應用伺服器',desc:'主要應用伺服器',type:'實體',os:'Ubuntu 22.04',ip:'10.0.1.11',owner:'陳建彰',note:'跑官網與 API'},
+  {id:'2',name:'DB-01 資料庫伺服器',desc:'主要資料庫伺服器',type:'實體',os:'Ubuntu 22.04',ip:'10.0.1.21',owner:'陳建彰',note:'PostgreSQL 主機，每日備份'},
+  {id:'3',name:'VM-01 虛擬化主機',desc:'虛擬化主機',type:'實體',os:'VMware ESXi 8.0',ip:'10.0.1.12',owner:'陳建彰',note:'承載下方虛擬主機'},
+  {id:'13',name:'VM-APP-01 應用虛擬主機',desc:'應用虛擬主機',type:'虛擬',os:'Ubuntu 22.04',ip:'10.0.1.13',owner:'陳建彰',note:'跑在 VM-01 上'},
+  {id:'14',name:'VM-TEST-01 測試虛擬主機',desc:'測試虛擬主機',type:'虛擬',os:'Windows Server 2022',ip:'10.0.1.14',owner:'',note:'測試環境，跑在 VM-01 上'},
+  {id:'4',name:'核心交換器 CORE-SW01',desc:'機房核心交換器',type:'實體',os:'Cisco IOS XE',ip:'10.0.0.1',owner:'陳建彰',note:'機房核心，雙電源'},
+  {id:'5',name:'樓層交換器 ACC-SW02',desc:'樓層接入交換器',type:'實體',os:'Cisco IOS XE',ip:'10.0.0.2',owner:'',note:''},
+  {id:'6',name:'防火牆 FW-01',desc:'邊界防火牆',type:'實體',os:'FortiOS 7.4',ip:'10.0.0.254',owner:'陳建彰',note:'授權到期前 60 天提醒續約'},
+  {id:'7',name:'無線控制器 WLC-01',desc:'無線網路控制器',type:'實體',os:'Cisco IOS XE',ip:'10.0.0.10',owner:'',note:'管理全棟 AP'},
+  {id:'8',name:'NAS 備份主機',desc:'備份儲存主機',type:'實體',os:'Synology DSM 7.2',ip:'10.0.1.31',owner:'陳建彰',note:'每週完整備份 + 每日增量'},
+  {id:'9',name:'SAN 儲存陣列',desc:'儲存陣列',type:'實體',os:'',ip:'10.0.1.32',owner:'',note:''},
+  {id:'10',name:'UPS 不斷電系統',desc:'不斷電系統',type:'實體',os:'',ip:'',owner:'',note:'電池建議每 3 年檢測'},
+  {id:'11',name:'精密空調 PAC-01',desc:'精密空調',type:'實體',os:'',ip:'',owner:'',note:'設定 24°C，每季保養'},
+  {id:'12',name:'KVM 切換器',desc:'KVM 切換器',type:'實體',os:'',ip:'',owner:'',note:'已由 IP KVM 取代，留作備品'},
 ];
 function normalize(x){
-  return {id:String(x.id),name:x.name||'',type:mapType(x.type),os:x.os||'',ip:x.ip||'',owner:x.owner||'',note:x.note||''};
+  return {id:String(x.id),name:x.name||'',desc:x.desc||'',type:mapType(x.type),os:x.os||'',ip:x.ip||'',owner:x.owner||'',note:x.note||''};
 }
 function load(){
   try{
@@ -254,7 +255,7 @@ function filtered(){
   const q = document.getElementById('q').value.trim().toLowerCase();
   const tp = document.getElementById('typeFilter').value;
   return items.filter(x => (!tp || x.type===tp) &&
-    (!q || [x.name,x.type,x.os,x.ip,x.owner,x.note].join(' ').toLowerCase().includes(q)));
+    (!q || [x.name,x.desc,x.type,x.os,x.ip,x.owner,x.note].join(' ').toLowerCase().includes(q)));
 }
 function render(){
   const list = sortList(filtered());
@@ -264,6 +265,7 @@ function render(){
   tb.innerHTML = list.map(x => {
     return `<tr>
       <td data-label="設備名稱"><b>${esc(x.name)}</b>${x.note ? `<br><span style="color:#6b7280;font-size:13px">${esc(x.note)}</span>` : ''}</td>
+      <td data-label="設備描述">${esc(x.desc) || '—'}</td>
       <td data-label="類型"><span class="tag ${x.type==='虛擬' ? 'virtual' : 'physical'}">${esc(x.type)}</span></td>
       <td data-label="作業系統">${esc(x.os) || '—'}</td>
       <td data-label="IP 位址">${esc(x.ip) || '—'}</td>
@@ -282,8 +284,8 @@ function render(){
   });
 }
 function toCSV(list){
-  const cols = ['設備名稱','類型','作業系統','IP位址','負責人','備註'];
-  const keys = ['name','type','os','ip','owner','note'];
+  const cols = ['設備名稱','設備描述','類型','作業系統','IP位址','負責人','備註'];
+  const keys = ['name','desc','type','os','ip','owner','note'];
   const q = v => '"' + String(v ?? '').replace(/"/g,'""') + '"';
   const lines = [cols.map(q).join(',')].concat(list.map(x => keys.map(k=>q(x[k])).join(',')));
   return '\uFEFF' + lines.join('\r\n');
@@ -333,14 +335,14 @@ function importCSV(text, enc){
   const header = rows[0].map(c => String(c).trim());
   const hasHeader = header.includes('設備名稱');
   const idx = name => hasHeader ? header.indexOf(name) : -1;
-  const col = {name: idx('設備名稱'), type: idx('類型'), os: idx('作業系統'), ip: idx('IP位址'), owner: idx('負責人'), note: idx('備註')};
+  const col = {name: idx('設備名稱'), desc: idx('設備描述'), type: idx('類型'), os: idx('作業系統'), ip: idx('IP位址'), owner: idx('負責人'), note: idx('備註')};
     const dataRows = hasHeader ? rows.slice(1) : rows;
   let added = 0, skipped = 0;
   dataRows.forEach((r, i) => {
-    const get = (key, pos) => { const j = col[key]; return String(j >= 0 ? (r[j] || '') : (r[pos] || '')).trim(); };
+    const get = (key, pos) => { const j = col[key]; if(hasHeader) return String(j >= 0 ? (r[j] || '') : '').trim(); return String(r[pos] || '').trim(); };
     const name = get('name', 0);
     if(!name){ skipped++; return; }
-    items.push(normalize({id: Date.now().toString() + '-' + i, name, type: get('type', 1), os: get('os', 2), ip: get('ip', 3), owner: get('owner', 4), note: get('note', 5)}));
+    items.push(normalize({id: Date.now().toString() + '-' + i, name, desc: get('desc', 1), type: get('type', 2), os: get('os', 3), ip: get('ip', 4), owner: get('owner', 5), note: get('note', 6)}));
     added++;
   });
   save(); render();
@@ -358,7 +360,7 @@ function openEdit(id){
   const x = items.find(i=>i.id===id); if(!x) return;
   document.getElementById('dlgTitle').textContent = '編輯設備';
   document.getElementById('editId').value = x.id;
-  document.getElementById('fName').value = x.name;
+  document.getElementById('fName').value = x.name; document.getElementById('fDesc').value = x.desc || '';
   document.getElementById('fType').value = x.type || '實體'; document.getElementById('fOs').value = x.os || '';
   document.getElementById('fIp').value = x.ip || '';
   document.getElementById('fOwner').value = x.owner || ''; document.getElementById('fNote').value = x.note || '';
@@ -370,7 +372,7 @@ document.getElementById('cancelBtn').onclick = () => dlg.close();
 document.getElementById('form').onsubmit = e => {
   e.preventDefault();
   const v = id => document.getElementById(id).value.trim();
-  const data = {name:v('fName'),type:v('fType'),os:v('fOs'),ip:v('fIp'),owner:v('fOwner'),note:v('fNote')};
+  const data = {name:v('fName'),desc:v('fDesc'),type:v('fType'),os:v('fOs'),ip:v('fIp'),owner:v('fOwner'),note:v('fNote')};
   const editId = document.getElementById('editId').value;
   if(editId){ const x = items.find(i=>i.id===editId); Object.assign(x, data); }
   else { items.unshift({id: Date.now().toString(), ...data}); }
@@ -403,8 +405,8 @@ document.getElementById('csvFile').onchange = e => {
 };
 document.getElementById('templateBtn').onclick = () => {
   const blob = new Blob([toCSV([
-    {name:'範例伺服器',type:'實體',os:'Ubuntu 22.04',ip:'10.0.1.99',owner:'',note:'請依此格式填寫後匯入'},
-    {name:'範例虛擬主機',type:'虛擬',os:'Windows Server 2022',ip:'10.0.1.100',owner:'',note:''}
+    {name:'範例伺服器',desc:'主要網站伺服器',type:'實體',os:'Ubuntu 22.04',ip:'10.0.1.99',owner:'',note:'請依此格式填寫後匯入'},
+    {name:'範例虛擬主機',desc:'測試用虛擬主機',type:'虛擬',os:'Windows Server 2022',ip:'10.0.1.100',owner:'',note:''}
   ])], {type:'text/csv;charset=utf-8'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = 'it-room-equipment-template.csv'; a.click();
